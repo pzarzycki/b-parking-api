@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  attendant
+}
+enum SpotStatus {
+  available
+  occupied
+}
+enum OccupancySource {
+  vehicle
+  manual
+}
+
+model User {
+  id String @id @default(uuid()) @db.Uuid
+  username String @unique
+  passwordHash String
+  role Role
+  active Boolean @default(true)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  auditEvents AuditEvent[]
+}
+model GarageLayout {
+  id Int @id @default(1)
+  yaml String
+  revision Int
+  sha256 String
+  uploadedById String @db.Uuid
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+}
+model Floor {
+  id String @id
+  level Int @unique
+  name String
+  bays Bay[]
+}
+model Bay {
+  id String @id
+  floorId String
+  name String
+  floor Floor @relation(fields:[floorId],references:[id])
+  spots ParkingSpot[]
+}
+model ParkingSpot {
+  id String @id
+  floorId String
+  bayId String
+  number String
+  status SpotStatus @default(available)
+  occupancySource OccupancySource?
+  manualReason String?
+  bay Bay @relation(fields:[bayId],references:[id])
+  sessions ParkingSession[]
+  @@unique([bayId, number])
+}
+model ParkingSession {
+  id String @id @default(uuid()) @db.Uuid
+  licensePlate String
+  spotId String
+  checkedInAt DateTime @default(now()) @db.Timestamptz(6)
+  checkedOutAt DateTime? @db.Timestamptz(6)
+  spot ParkingSpot @relation(fields:[spotId],references:[id])
+}
+model AuditEvent {
+  id String @id @default(uuid()) @db.Uuid
+  actorId String? @db.Uuid
+  action String
+  entityType String
+  entityId String
+  details Json
+  occurredAt DateTime @default(now()) @db.Timestamptz(6)
+  actor User? @relation(fields:[actorId],references:[id])
+}

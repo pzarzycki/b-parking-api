@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://parking.example/schemas/floor-plan.schema.json",
+  "title": "Parking garage floor plan",
+  "type": "object",
+  "required": ["version", "garage", "floors"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": 1 },
+    "garage": { "type": "object", "required": ["id", "name"], "additionalProperties": false, "properties": { "id": { "$ref": "#/$defs/id" }, "name": { "$ref": "#/$defs/name" } } },
+    "floors": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/floor" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z][A-Za-z0-9_-]*$" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "positive": { "type": "number", "exclusiveMinimum": 0 },
+    "point": { "type": "object", "required": ["x", "y"], "additionalProperties": false, "properties": { "x": { "type": "number", "minimum": 0 }, "y": { "type": "number", "minimum": 0 } } },
+    "floor": { "type": "object", "required": ["id", "level", "name", "canvas", "bays", "features"], "additionalProperties": false, "properties": { "id": { "$ref": "#/$defs/id" }, "level": { "type": "integer", "minimum": 0 }, "name": { "$ref": "#/$defs/name" }, "canvas": { "type": "object", "required": ["width", "height"], "additionalProperties": false, "properties": { "width": { "$ref": "#/$defs/positive" }, "height": { "$ref": "#/$defs/positive" } } }, "bays": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/bay" } }, "features": { "type": "array", "items": { "$ref": "#/$defs/feature" } } } },
+    "bay": { "type": "object", "required": ["id", "name", "spots"], "additionalProperties": false, "properties": { "id": { "$ref": "#/$defs/id" }, "name": { "$ref": "#/$defs/name" }, "spots": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/spot" } } } },
+    "spot": { "type": "object", "required": ["id", "number", "geometry"], "additionalProperties": false, "properties": { "id": { "$ref": "#/$defs/id" }, "number": { "type": "string", "minLength": 1, "maxLength": 50 }, "geometry": { "type": "object", "required": ["x", "y", "width", "height", "orientation"], "additionalProperties": false, "properties": { "x": { "type": "number", "minimum": 0 }, "y": { "type": "number", "minimum": 0 }, "width": { "$ref": "#/$defs/positive" }, "height": { "$ref": "#/$defs/positive" }, "orientation": { "type": "number", "minimum": 0, "exclusiveMaximum": 360 } } } } },
+    "feature": { "type": "object", "required": ["id", "type", "points"], "additionalProperties": false, "properties": { "id": { "$ref": "#/$defs/id" }, "type": { "type": "string", "enum": ["lane", "way", "wall", "gate"] }, "direction": { "type": "string", "enum": ["in", "out"] }, "points": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/point" } } }, "allOf": [{ "if": { "properties": { "type": { "const": "gate" } } }, "then": { "required": ["direction"] }, "else": { "not": { "required": ["direction"] } } }] }
+  }
+}

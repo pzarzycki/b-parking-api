@@ -1,0 +1,43 @@
+{
+  "docusaurus-plugin-content-docs": {
+    "default": {
+      "path": "/b-parking-api/",
+      "versions": [
+        {
+          "name": "current",
+          "label": "Next",
+          "isLast": true,
+          "path": "/b-parking-api/",
+          "mainDocId": "introduction",
+          "docs": [
+            {
+              "id": "database-schema",
+              "path": "/b-parking-api/database-schema",
+              "sidebar": "documentationSidebar"
+            },
+            {
+              "id": "floor-plans",
+              "path": "/b-parking-api/floor-plans",
+              "sidebar": "documentationSidebar"
+            },
+            {
+              "id": "introduction",
+              "path": "/b-parking-api/",
+              "sidebar": "documentationSidebar"
+            }
+          ],
+          "draftIds": [],
+          "sidebars": {
+            "documentationSidebar": {
+              "link": {
+                "path": "/b-parking-api/",
+                "label": "introduction"
+              }
+            }
+          }
+        }
+      ],
+      "breadcrumbs": true
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "/b-parking-api/api-reference/-a71": {
+    "__comp": "c2a50571",
+    "__context": {
+      "plugin": "cf586e30"
+    }
+  },
+  "/b-parking-api/-c52": {
+    "__comp": "5e95c892",
+    "__context": {
+      "plugin": "aba21aa0"
+    }
+  },
+  "/b-parking-api/-9a2": {
+    "__comp": "a7bd4aaa",
+    "__props": "22ae7ad0"
+  },
+  "/b-parking-api/-083": {
+    "__comp": "a94703ab"
+  },
+  "/b-parking-api/database-schema/-d89": {
+    "__comp": "17896441",
+    "content": "9587b32a"
+  },
+  "/b-parking-api/floor-plans/-89b": {
+    "__comp": "17896441",
+    "content": "85332e56"
+  },
+  "/b-parking-api/-12b": {
+    "__comp": "17896441",
+    "content": "95e88d79"
+  }
+}

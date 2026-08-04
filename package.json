@@ -1,0 +1,49 @@
+{
+  "name": "parking-garage-management-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "build": "tsc --noEmit",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "test": "vitest run",
+    "floor-plan:validate": "tsx scripts/render-floor-plan.ts examples/garage-layout.yml --check",
+    "floor-plan:render": "tsx scripts/render-floor-plan.ts",
+    "openapi:check": "redocly lint specs/openapi.yaml",
+    "docs:prepare": "node scripts/copy-openapi.mjs && npm run floor-plan:render -- examples/garage-layout.yml --floor ground --output docs/website/static/img/floor-plans/garage-layout-ground.svg && npm run floor-plan:render -- examples/garage-layout.yml --floor upper --output docs/website/static/img/floor-plans/garage-layout-upper.svg",
+    "docs:build": "npm run docs:prepare && docusaurus build docs/website",
+    "docs:check": "npm run floor-plan:validate && npm run openapi:check && npm run docs:build",
+    "docs:start": "npm run docs:prepare && docusaurus start docs/website",
+    "docs:preview": "npm run docs:build && docusaurus serve docs/website"
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.0.1",
+    "@fastify/jwt": "^9.0.4",
+    "@fastify/swagger": "^9.4.0",
+    "@fastify/swagger-ui": "^5.2.1",
+    "@prisma/client": "^6.1.0",
+    "ajv": "^8.17.1",
+    "argon2": "^0.41.1",
+    "fastify": "^5.2.1",
+    "prisma": "^6.1.0",
+    "yaml": "^2.5.1"
+  },
+  "devDependencies": {
+    "@docusaurus/core": "^3.10.2",
+    "@docusaurus/preset-classic": "^3.10.2",
+    "@docusaurus/theme-mermaid": "^3.10.2",
+    "@mdx-js/react": "^3.1.1",
+    "@mermaid-js/layout-elk": "^0.1.9",
+    "@redocly/cli": "^2.44.1",
+    "@scalar/docusaurus": "^0.8.33",
+    "@types/node": "^22.10.1",
+    "clsx": "^2.1.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

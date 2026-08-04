@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkparking_garage_management_api=self.webpackChunkparking_garage_management_api||[]).push([[8488],{8488(e,a,r){r.d(a,{createArchitectureServices:()=>g.S});var g=r(9221);r(1400)}}]);

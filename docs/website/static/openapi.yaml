@@ -1,0 +1,300 @@
+openapi: 3.1.0
+info:
+  title: Parking Garage Management API
+  version: 1.0.0
+  license:
+    name: UNLICENSED
+    identifier: LicenseRef-Proprietary
+  description: |
+    API for a single garage's layout, current spot availability, vehicle parking
+    sessions, users, and audit history. Authenticate operational endpoints with
+    a bearer token returned by the login operation. The floor-plan YAML download
+    is intentionally public for the visualization client.
+servers:
+  - url: /
+tags:
+  - name: Authentication
+    description: Obtain and inspect JWT credentials for API users.
+  - name: Floor plan
+    description: Download the public visualization document or replace the canonical layout as an admin.
+  - name: Parking spots
+    description: Inspect live availability and record non-vehicle manual occupancy.
+  - name: Parking sessions
+    description: Check vehicles in and out while preserving their parking history.
+  - name: Users
+    description: Admin-only management of authenticated staff accounts.
+  - name: History
+    description: Admin-only parking-session and immutable audit-event queries.
+paths:
+  /api/auth/login:
+    post:
+      tags: [Authentication]
+      summary: Sign in
+      description: Exchanges an active user's username and password for a JWT. Invalid credentials do not reveal whether the username exists.
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+            example: { username: admin, password: admin }
+      responses:
+        '200':
+          description: Authenticated token and user identity.
+          content: { application/json: { schema: { $ref: '#/components/schemas/AuthToken' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /api/auth/me:
+    get:
+      tags: [Authentication]
+      summary: Get current user
+      description: Returns the identity and role represented by the supplied bearer token.
+      operationId: getCurrentUser
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Current user., content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/garage/floor-plan:
+    get:
+      tags: [Floor plan]
+      summary: Download current floor plan
+      description: Returns the single stored canonical YAML document without authentication. Live occupancy is retrieved through parking-spot endpoints.
+      operationId: getFloorPlan
+      security: []
+      responses:
+        '200':
+          description: Current floor-plan definition.
+          content: { application/yaml: { schema: { type: string }, example: "version: 1\ngarage:\n  id: downtown-garage\n" } }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Floor plan]
+      summary: Replace floor plan
+      description: Admin-only replacement of the canonical YAML document. The service validates the complete hierarchy and geometry, then atomically updates layout projections. The request is rejected if it would destructively alter occupied or historically referenced spots.
+      operationId: replaceFloorPlan
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FloorPlanUpload' }
+      responses:
+        '200': { description: Stored revision metadata., content: { application/json: { schema: { $ref: '#/components/schemas/FloorPlanRevision' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /api/parking-spots:
+    get:
+      tags: [Parking spots]
+      summary: List parking spots
+      description: Lists the operational spot projection and its current availability. Attendants and admins may filter by floor, bay, or status.
+      operationId: listParkingSpots
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/FloorId' }
+        - { $ref: '#/components/parameters/BayId' }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/SpotStatus' }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PageSize' }
+      responses:
+        '200': { description: Page of spots., content: { application/json: { schema: { $ref: '#/components/schemas/ParkingSpotPage' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/parking-spots/available:
+    get:
+      tags: [Parking spots]
+      summary: List available spots
+      description: Convenience endpoint for currently available spots. It is equivalent to listing spots with the available status filter.
+      operationId: listAvailableParkingSpots
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/FloorId' }
+        - { $ref: '#/components/parameters/BayId' }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PageSize' }
+      responses:
+        '200': { description: Page of available spots., content: { application/json: { schema: { $ref: '#/components/schemas/ParkingSpotPage' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/parking-spots/{spotId}:
+    get:
+      tags: [Parking spots]
+      summary: Get a parking spot
+      description: Retrieves one spot's immutable location identity and current operational state.
+      operationId: getParkingSpot
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/SpotId' }]
+      responses:
+        '200': { description: Parking spot., content: { application/json: { schema: { $ref: '#/components/schemas/ParkingSpot' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Parking spots]
+      summary: Record manual spot status
+      description: Records a non-vehicle occupancy or releases manual occupancy. Occupying requires a reason. Vehicle-occupied spots must be released by parking-session checkout so car history remains consistent.
+      operationId: updateParkingSpotStatus
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/SpotId' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/SpotStatusUpdate' } } }
+      responses:
+        '200': { description: Updated spot., content: { application/json: { schema: { $ref: '#/components/schemas/ParkingSpot' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /api/parking-sessions/check-in:
+    post:
+      tags: [Parking sessions]
+      summary: Check in a car
+      description: Creates an active parking session for a unique plate. A requested spot must be available; otherwise the server assigns the first available spot in stable floor, bay, and spot-number order. Assignment is transactionally protected from concurrent double booking.
+      operationId: checkIn
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CheckInRequest' } } }
+      responses:
+        '201': { description: Active parking session., content: { application/json: { schema: { $ref: '#/components/schemas/ParkingSession' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /api/parking-sessions/check-out:
+    post:
+      tags: [Parking sessions]
+      summary: Check out a car
+      description: Ends one active session and frees its vehicle-occupied spot. Supply exactly one of sessionId or licensePlate; both references resolve only active sessions.
+      operationId: checkOut
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CheckOutRequest' } } }
+      responses:
+        '200': { description: Closed parking session., content: { application/json: { schema: { $ref: '#/components/schemas/ParkingSession' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /api/parking-sessions:
+    get:
+      tags: [History]
+      summary: List parking history
+      description: Admin-only paginated history of active and completed vehicle parking sessions. Filter by normalized plate or lifecycle status.
+      operationId: listParkingSessions
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: licensePlate
+          in: query
+          schema: { type: string }
+        - name: active
+          in: query
+          schema: { type: boolean }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PageSize' }
+      responses:
+        '200': { description: Page of sessions., content: { application/json: { schema: { $ref: '#/components/schemas/ParkingSessionPage' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/audit-events:
+    get:
+      tags: [History]
+      summary: List audit events
+      description: Admin-only immutable history of user and system actions. Filter by action, actor, or entity to investigate operational changes.
+      operationId: listAuditEvents
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: action
+          in: query
+          schema: { type: string }
+        - name: actorId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: entityId
+          in: query
+          schema: { type: string }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PageSize' }
+      responses:
+        '200': { description: Page of audit events., content: { application/json: { schema: { $ref: '#/components/schemas/AuditEventPage' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/users:
+    get:
+      tags: [Users]
+      summary: List users
+      description: Admin-only staff listing. Password hashes are never exposed.
+      operationId: listUsers
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Users., content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/User' } } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Users]
+      summary: Create user
+      description: Admin-only creation of an active admin or attendant account.
+      operationId: createUser
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CreateUserRequest' } } } }
+      responses:
+        '201': { description: Created user., content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /api/users/{userId}:
+    patch:
+      tags: [Users]
+      summary: Update user
+      description: Admin-only role, active-state, and password management. Disabling the final active admin is rejected.
+      operationId: updateUser
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/UpdateUserRequest' } } } }
+      responses:
+        '200': { description: Updated user., content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    SpotId: { name: spotId, in: path, required: true, schema: { type: string, minLength: 1 } }
+    FloorId: { name: floorId, in: query, schema: { type: string } }
+    BayId: { name: bayId, in: query, schema: { type: string } }
+    Page: { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+    PageSize: { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+  responses:
+    Unauthorized: { description: 'Missing, invalid, expired, or disabled-user token.', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
+    Forbidden: { description: Authenticated user lacks the required role., content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
+    NotFound: { description: Requested resource does not exist., content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
+    Conflict: { description: Current state prevents the requested operation., content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
+    ValidationError: { description: Request data or floor-plan content is invalid., content: { application/problem+json: { schema: { $ref: '#/components/schemas/ValidationProblem' } } } }
+  schemas:
+    LoginRequest: { type: object, required: [username, password], properties: { username: { type: string, minLength: 1 }, password: { type: string, minLength: 1 } }, additionalProperties: false }
+    AuthToken: { type: object, required: [token, user], properties: { token: { type: string }, user: { $ref: '#/components/schemas/User' } } }
+    Role: { type: string, enum: [admin, attendant] }
+    User: { type: object, required: [id, username, role, active, createdAt, updatedAt], properties: { id: { type: string, format: uuid }, username: { type: string }, role: { $ref: '#/components/schemas/Role' }, active: { type: boolean }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time } } }
+    CreateUserRequest: { type: object, required: [username, password, role], properties: { username: { type: string, minLength: 1, maxLength: 100 }, password: { type: string, minLength: 8 }, role: { $ref: '#/components/schemas/Role' } }, additionalProperties: false }
+    UpdateUserRequest: { type: object, minProperties: 1, properties: { role: { $ref: '#/components/schemas/Role' }, active: { type: boolean }, password: { type: string, minLength: 8 } }, additionalProperties: false }
+    FloorPlanUpload: { type: object, required: [yaml], properties: { yaml: { type: string, minLength: 1 } }, additionalProperties: false }
+    FloorPlanRevision: { type: object, required: [revision, sha256, updatedAt, uploadedBy], properties: { revision: { type: integer, minimum: 1 }, sha256: { type: string, pattern: '^[a-f0-9]{64}$' }, updatedAt: { type: string, format: date-time }, uploadedBy: { type: string, format: uuid } } }
+    SpotStatus: { type: string, enum: [available, occupied] }
+    OccupancySource: { type: string, enum: [vehicle, manual] }
+    ParkingSpot: { type: object, required: [id, floorId, bayId, number, status], properties: { id: { type: string }, floorId: { type: string }, bayId: { type: string }, number: { type: string }, status: { $ref: '#/components/schemas/SpotStatus' }, occupancySource: { $ref: '#/components/schemas/OccupancySource' }, manualReason: { type: [string, 'null'] } } }
+    SpotStatusUpdate: { type: object, required: [status], properties: { status: { $ref: '#/components/schemas/SpotStatus' }, reason: { type: string, minLength: 1, maxLength: 500 } }, additionalProperties: false }
+    CheckInRequest: { type: object, required: [licensePlate], properties: { licensePlate: { type: string, minLength: 1, maxLength: 32 }, spotId: { type: string, minLength: 1 } }, additionalProperties: false }
+    CheckOutRequest: { type: object, oneOf: [{ required: [sessionId] }, { required: [licensePlate] }], properties: { sessionId: { type: string, format: uuid }, licensePlate: { type: string, minLength: 1, maxLength: 32 } }, additionalProperties: false }
+    ParkingSession: { type: object, required: [id, licensePlate, spotId, checkedInAt, checkedOutAt], properties: { id: { type: string, format: uuid }, licensePlate: { type: string }, spotId: { type: string }, checkedInAt: { type: string, format: date-time }, checkedOutAt: { type: [string, 'null'], format: date-time } } }
+    AuditEvent: { type: object, required: [id, action, entityType, entityId, occurredAt, details], properties: { id: { type: string, format: uuid }, actorId: { type: [string, 'null'], format: uuid }, action: { type: string }, entityType: { type: string }, entityId: { type: string }, occurredAt: { type: string, format: date-time }, details: { type: object, additionalProperties: true } } }
+    ParkingSpotPage: { type: object, required: [items, page, pageSize, total], properties: { items: { type: array, items: { $ref: '#/components/schemas/ParkingSpot' } }, page: { type: integer }, pageSize: { type: integer }, total: { type: integer } } }
+    ParkingSessionPage: { type: object, required: [items, page, pageSize, total], properties: { items: { type: array, items: { $ref: '#/components/schemas/ParkingSession' } }, page: { type: integer }, pageSize: { type: integer }, total: { type: integer } } }
+    AuditEventPage: { type: object, required: [items, page, pageSize, total], properties: { items: { type: array, items: { $ref: '#/components/schemas/AuditEvent' } }, page: { type: integer }, pageSize: { type: integer }, total: { type: integer } } }
+    Problem: { type: object, required: [type, title, status, detail, code], properties: { type: { type: string, format: uri-reference }, title: { type: string }, status: { type: integer }, detail: { type: string }, code: { type: string } } }
+    ValidationProblem: { allOf: [{ $ref: '#/components/schemas/Problem' }, { type: object, required: [errors], properties: { errors: { type: array, items: { type: object, required: [path, message], properties: { path: { type: string }, message: { type: string } } } } } }] }
