@@ -70,7 +70,7 @@ paths:
     put:
       tags: [Floor plan]
       summary: Replace floor plan
-      description: Admin-only replacement of the canonical YAML document. The service validates the complete hierarchy and geometry, then atomically updates layout projections. The request is rejected if it would destructively alter occupied or historically referenced spots.
+      description: Admin-only replacement of the canonical YAML document. This alpha API uses reset semantics: the service validates the complete hierarchy and geometry, then atomically replaces layout projections and discards existing parking sessions, spot state, and audit history.
       operationId: replaceFloorPlan
       security: [{ bearerAuth: [] }]
       requestBody:

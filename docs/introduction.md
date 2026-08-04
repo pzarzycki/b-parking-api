@@ -7,7 +7,7 @@ slug: /
 
 The Parking Garage Management API manages one garage's floor-plan definition, current parking-spot state, vehicle sessions, staff users, and an auditable history of operational changes.
 
-Use this documentation to understand the API contract and the floor-plan YAML uploaded to the service. The complete HTTP contract is available in the [API reference](api-reference).
+Use this documentation to understand the API contract and the floor-plan YAML uploaded to the service. The complete HTTP contract is available in the [API reference](/api-reference).
 
 ## Who uses the API
 

@@ -17,6 +17,7 @@ The site is built with Docusaurus and does not require Docker.
 
 ```bash
 npm ci
+npm ci --prefix docs/website
 npm run docs:check
 npm run docs:start
 ```
@@ -43,6 +44,18 @@ GitHub Pages deployment is automated on pushes to `main`. In repository settings
 docker compose up --build
 ```
 
-On an empty database the service creates `admin` / `admin`. This bootstrap credential is for initial local setup and must be changed immediately. Setting `DEVELOPER_MODE=true` outside production additionally creates the `developer` / `developer` attendant account.
+The parking operations web app is available at [http://localhost:8080](http://localhost:8080). The API remains available at [http://localhost:3000](http://localhost:3000), with Swagger UI at [http://localhost:3000/api/docs](http://localhost:3000/api/docs).
 
-Swagger UI is available at `/api/docs`; the canonical contract is served at `/openapi.yaml`.
+On a fresh Compose database the service creates `admin` / `admin` and uploads the repository's sample two-floor layout, so the dashboard is ready to use immediately. This local bootstrap credential is for initial setup only and must be changed immediately. Existing Compose data is retained in the named PostgreSQL volume.
+
+### Frontend development
+
+```bash
+cd web
+npm ci
+npm run dev
+```
+
+The Vite server proxies API requests to the local API on port `3000`. Run `npm run web:build` from the repository root for the production frontend build.
+
+The canonical OpenAPI contract is served at `/openapi.yaml`.

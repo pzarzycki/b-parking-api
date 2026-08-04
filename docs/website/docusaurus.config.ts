@@ -1,10 +1,5 @@
 import type { Config } from '@docusaurus/types';
 import type { ScalarOptions } from '@scalar/docusaurus';
-import { createRequire } from 'node:module';
-import { dirname, resolve } from 'node:path';
-
-const require = createRequire(import.meta.url);
-const scalarComponent = require.resolve('@scalar/docusaurus/dist/ScalarDocusaurus.js');
 
 const config: Config = {
   title: 'Parking Garage Management API',
@@ -27,7 +22,6 @@ const config: Config = {
         path: '..',
         routeBasePath: '/',
         sidebarPath: './sidebars.ts',
-        include: ['*.md', '**/*.md'],
         exclude: ['website/**'],
       },
       blog: false,
@@ -36,19 +30,11 @@ const config: Config = {
     }],
   ],
   plugins: [
-    () => ({
-      name: 'scalar-esm-compatibility',
-      configureWebpack: () => ({
-        resolve: {
-          alias: {
-            [resolve(dirname(scalarComponent), 'ScalarDocusaurus')]: scalarComponent,
-          },
-        },
-      }),
-    }),
     ['@scalar/docusaurus', {
+      id: 'parking-api-reference',
       label: 'API reference',
       route: '/api-reference',
+      showNavLink: false,
       configuration: {
         url: '/b-parking-api/openapi.yaml',
         hideClientButton: true,

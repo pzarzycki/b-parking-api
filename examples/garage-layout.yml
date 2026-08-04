@@ -1,4 +1,4 @@
-version: 2
+version: 1
 garage: { id: downtown-garage, name: Downtown Garage, units: metres }
 floors:
   - id: ground
@@ -7,105 +7,62 @@ floors:
     canvas: { width: 120, height: 80 }
     footprint: { points: [{ x: 4, y: 5 }, { x: 116, y: 5 }, { x: 116, y: 75 }, { x: 4, y: 75 }] }
     routes:
-      - { id: ground-loop, kind: driveAisle, direction: oneWay, geometry: { points: [{ x: 7, y: 30 }, { x: 113, y: 30 }, { x: 113, y: 53 }, { x: 7, y: 53 }] }, centerline: [{ x: 8, y: 41 }, { x: 112, y: 41 }], connectsTo: [ground-ramp] }
-      - { id: ground-ramp, kind: ramp, direction: twoWay, geometry: { points: [{ x: 53, y: 32 }, { x: 67, y: 32 }, { x: 67, y: 50 }, { x: 53, y: 50 }] }, centerline: [{ x: 60, y: 33 }, { x: 60, y: 49 }], connectsTo: [ground-loop] }
-      - { id: ground-south, kind: way, direction: twoWay, geometry: { points: [{ x: 7, y: 57 }, { x: 113, y: 57 }, { x: 113, y: 67 }, { x: 7, y: 67 }] }, centerline: [{ x: 8, y: 62 }, { x: 112, y: 62 }], connectsTo: [ground-loop] }
+      - { id: ground-main, kind: driveAisle, direction: oneWay, geometry: { points: [{ x: 7, y: 31 }, { x: 113, y: 31 }, { x: 113, y: 49 }, { x: 7, y: 49 }] }, centerline: [{ x: 8, y: 40 }, { x: 112, y: 40 }], connectsTo: [ground-ramp] }
+      - { id: ground-ramp, kind: ramp, direction: twoWay, geometry: { points: [{ x: 53, y: 32 }, { x: 67, y: 32 }, { x: 67, y: 49 }, { x: 53, y: 49 }] }, centerline: [{ x: 60, y: 33 }, { x: 60, y: 48 }], connectsTo: [ground-main] }
     gates:
-      - { id: gate-in-west, direction: inbound, opening: [{ x: 12, y: 75 }, { x: 21, y: 75 }], connectsTo: ground-south }
-      - { id: gate-in-east, direction: inbound, opening: [{ x: 92, y: 75 }, { x: 101, y: 75 }], connectsTo: ground-south }
-      - { id: gate-out-west, direction: outbound, opening: [{ x: 12, y: 5 }, { x: 21, y: 5 }], connectsTo: ground-loop }
-      - { id: gate-out-east, direction: outbound, opening: [{ x: 92, y: 5 }, { x: 101, y: 5 }], connectsTo: ground-loop }
+      - { id: gate-in-west, direction: inbound, opening: [{ x: 12, y: 75 }, { x: 22, y: 75 }], connectsTo: ground-main }
+      - { id: gate-in-east, direction: inbound, opening: [{ x: 92, y: 75 }, { x: 102, y: 75 }], connectsTo: ground-main }
+      - { id: gate-out-west, direction: outbound, opening: [{ x: 12, y: 5 }, { x: 22, y: 5 }], connectsTo: ground-main }
+      - { id: gate-out-east, direction: outbound, opening: [{ x: 92, y: 5 }, { x: 102, y: 5 }], connectsTo: ground-main }
     amenities:
       - { id: ground-lift, type: lift, label: LIFT, geometry: { points: [{ x: 69, y: 33 }, { x: 75, y: 33 }, { x: 75, y: 39 }, { x: 69, y: 39 }] } }
       - { id: ground-stairs, type: stairs, label: STAIRS, geometry: { points: [{ x: 45, y: 33 }, { x: 51, y: 33 }, { x: 51, y: 39 }, { x: 45, y: 39 }] } }
     bays:
-      - id: north-a
-        name: NORTH A
+      - id: ground-north
+        name: NORTH BAY
         geometry: { points: [{ x: 8, y: 8 }, { x: 48, y: 8 }, { x: 48, y: 29 }, { x: 8, y: 29 }] }
-        labelAt: { x: 9, y: 11 }
+        labelAt: { x: 10, y: 12 }
         spots:
-          - { id: G-A01, label: A01, kind: standard, routeId: ground-loop, geometry: { x: 12, y: 14, width: 5, height: 10, rotation: 0 } }
-          - { id: G-A02, label: A02, kind: standard, routeId: ground-loop, geometry: { x: 18, y: 14, width: 5, height: 10, rotation: 0 } }
-          - { id: G-A03, label: A03, kind: accessible, routeId: ground-loop, geometry: { x: 24, y: 14, width: 5, height: 10, rotation: 0 } }
-          - { id: G-A04, label: A04, kind: standard, routeId: ground-loop, geometry: { x: 30, y: 14, width: 5, height: 10, rotation: 0 } }
-          - { id: G-A05, label: A05, kind: ev, routeId: ground-loop, geometry: { x: 36, y: 14, width: 5, height: 10, rotation: 0 } }
-      - id: north-b
-        name: NORTH B
-        geometry: { points: [{ x: 72, y: 8 }, { x: 112, y: 8 }, { x: 112, y: 29 }, { x: 72, y: 29 }] }
-        labelAt: { x: 73, y: 11 }
+          - { id: G-A01, label: A01, kind: standard, routeId: ground-main, geometry: { x: 12, y: 15, width: 5, height: 10, rotation: 0 } }
+          - { id: G-A02, label: A02, kind: accessible, routeId: ground-main, geometry: { x: 19, y: 15, width: 5, height: 10, rotation: 0 } }
+          - { id: G-A03, label: A03, kind: standard, routeId: ground-main, geometry: { x: 26, y: 15, width: 5, height: 10, rotation: 0 } }
+          - { id: G-A04, label: A04, kind: ev, routeId: ground-main, geometry: { x: 33, y: 15, width: 5, height: 10, rotation: 0 } }
+      - id: ground-east
+        name: EAST BAY
+        geometry: { points: [{ x: 73, y: 8 }, { x: 113, y: 8 }, { x: 113, y: 29 }, { x: 73, y: 29 }] }
+        labelAt: { x: 75, y: 12 }
         spots:
-          - { id: G-B01, label: B01, kind: standard, routeId: ground-loop, geometry: { x: 76, y: 14, width: 5, height: 10, rotation: 0 } }
-          - { id: G-B02, label: B02, kind: standard, routeId: ground-loop, geometry: { x: 82, y: 14, width: 5, height: 10, rotation: 0 } }
-          - { id: G-B03, label: B03, kind: standard, routeId: ground-loop, geometry: { x: 88, y: 14, width: 5, height: 10, rotation: 0 } }
-          - { id: G-B04, label: B04, kind: ev, routeId: ground-loop, geometry: { x: 94, y: 14, width: 5, height: 10, rotation: 0 } }
-          - { id: G-B05, label: B05, kind: standard, routeId: ground-loop, geometry: { x: 100, y: 14, width: 5, height: 10, rotation: 0 } }
-      - id: south-c
-        name: SOUTH C
-        geometry: { points: [{ x: 8, y: 54 }, { x: 48, y: 54 }, { x: 48, y: 73 }, { x: 8, y: 73 }] }
-        labelAt: { x: 9, y: 57 }
-        spots:
-          - { id: G-C01, label: C01, kind: standard, routeId: ground-south, geometry: { x: 12, y: 61, width: 5, height: 8, rotation: 0 } }
-          - { id: G-C02, label: C02, kind: standard, routeId: ground-south, geometry: { x: 18, y: 61, width: 5, height: 8, rotation: 0 } }
-          - { id: G-C03, label: C03, kind: standard, routeId: ground-south, geometry: { x: 24, y: 61, width: 5, height: 8, rotation: 0 } }
-          - { id: G-C04, label: C04, kind: standard, routeId: ground-south, geometry: { x: 30, y: 61, width: 5, height: 8, rotation: 0 } }
-      - id: south-d
-        name: SOUTH D
-        geometry: { points: [{ x: 72, y: 54 }, { x: 112, y: 54 }, { x: 112, y: 73 }, { x: 72, y: 73 }] }
-        labelAt: { x: 73, y: 57 }
-        spots:
-          - { id: G-D01, label: D01, kind: standard, routeId: ground-south, geometry: { x: 76, y: 61, width: 5, height: 8, rotation: 0 } }
-          - { id: G-D02, label: D02, kind: standard, routeId: ground-south, geometry: { x: 82, y: 61, width: 5, height: 8, rotation: 0 } }
-          - { id: G-D03, label: D03, kind: accessible, routeId: ground-south, geometry: { x: 88, y: 61, width: 5, height: 8, rotation: 0 } }
-          - { id: G-D04, label: D04, kind: standard, routeId: ground-south, geometry: { x: 94, y: 61, width: 5, height: 8, rotation: 0 } }
+          - { id: G-B01, label: B01, kind: standard, routeId: ground-main, geometry: { x: 77, y: 15, width: 5, height: 10, rotation: 0 } }
+          - { id: G-B02, label: B02, kind: standard, routeId: ground-main, geometry: { x: 84, y: 15, width: 5, height: 10, rotation: 0 } }
+          - { id: G-B03, label: B03, kind: ev, routeId: ground-main, geometry: { x: 91, y: 15, width: 5, height: 10, rotation: 0 } }
+          - { id: G-B04, label: B04, kind: standard, routeId: ground-main, geometry: { x: 98, y: 15, width: 5, height: 10, rotation: 0 } }
   - id: upper
     level: 1
     name: Upper floor
     canvas: { width: 120, height: 80 }
     footprint: { points: [{ x: 4, y: 5 }, { x: 116, y: 5 }, { x: 116, y: 75 }, { x: 4, y: 75 }] }
     routes:
-      - { id: upper-main, kind: driveAisle, direction: twoWay, geometry: { points: [{ x: 7, y: 31 }, { x: 113, y: 31 }, { x: 113, y: 52 }, { x: 7, y: 52 }] }, centerline: [{ x: 8, y: 41 }, { x: 112, y: 41 }], connectsTo: [upper-ramp] }
-      - { id: upper-ramp, kind: ramp, direction: twoWay, geometry: { points: [{ x: 54, y: 32 }, { x: 66, y: 32 }, { x: 66, y: 50 }, { x: 54, y: 50 }] }, centerline: [{ x: 60, y: 49 }, { x: 60, y: 33 }], connectsTo: [upper-main] }
+      - { id: upper-main, kind: driveAisle, direction: twoWay, geometry: { points: [{ x: 7, y: 31 }, { x: 113, y: 31 }, { x: 113, y: 49 }, { x: 7, y: 49 }] }, centerline: [{ x: 8, y: 40 }, { x: 112, y: 40 }], connectsTo: [upper-ramp] }
+      - { id: upper-ramp, kind: ramp, direction: twoWay, geometry: { points: [{ x: 53, y: 32 }, { x: 67, y: 32 }, { x: 67, y: 49 }, { x: 53, y: 49 }] }, centerline: [{ x: 60, y: 33 }, { x: 60, y: 48 }], connectsTo: [upper-main] }
     gates: []
     amenities:
-      - { id: upper-lift, type: lift, label: LIFT, geometry: { points: [{ x: 68, y: 33 }, { x: 74, y: 33 }, { x: 74, y: 39 }, { x: 68, y: 39 }] } }
+      - { id: upper-lift, type: lift, label: LIFT, geometry: { points: [{ x: 69, y: 33 }, { x: 75, y: 33 }, { x: 75, y: 39 }, { x: 69, y: 39 }] } }
     bays:
-      - id: upper-a
-        name: UPPER A
-        geometry: { points: [{ x: 8, y: 8 }, { x: 51, y: 8 }, { x: 51, y: 30 }, { x: 8, y: 30 }] }
-        labelAt: { x: 9, y: 11 }
+      - id: upper-west
+        name: WEST BAY
+        geometry: { points: [{ x: 8, y: 8 }, { x: 48, y: 8 }, { x: 48, y: 29 }, { x: 8, y: 29 }] }
+        labelAt: { x: 10, y: 12 }
         spots:
-          - { id: U-A01, label: A01, kind: standard, routeId: upper-main, geometry: { x: 12, y: 14, width: 5, height: 10, rotation: 0 } }
-          - { id: U-A02, label: A02, kind: standard, routeId: upper-main, geometry: { x: 18, y: 14, width: 5, height: 10, rotation: 0 } }
-          - { id: U-A03, label: A03, kind: ev, routeId: upper-main, geometry: { x: 24, y: 14, width: 5, height: 10, rotation: 0 } }
-          - { id: U-A04, label: A04, kind: standard, routeId: upper-main, geometry: { x: 30, y: 14, width: 5, height: 10, rotation: 0 } }
-          - { id: U-A05, label: A05, kind: standard, routeId: upper-main, geometry: { x: 36, y: 14, width: 5, height: 10, rotation: 0 } }
-      - id: upper-b
-        name: UPPER B
-        geometry: { points: [{ x: 69, y: 8 }, { x: 112, y: 8 }, { x: 112, y: 30 }, { x: 69, y: 30 }] }
-        labelAt: { x: 70, y: 11 }
+          - { id: U-A01, label: A01, kind: standard, routeId: upper-main, geometry: { x: 12, y: 15, width: 5, height: 10, rotation: 0 } }
+          - { id: U-A02, label: A02, kind: accessible, routeId: upper-main, geometry: { x: 19, y: 15, width: 5, height: 10, rotation: 0 } }
+          - { id: U-A03, label: A03, kind: standard, routeId: upper-main, geometry: { x: 26, y: 15, width: 5, height: 10, rotation: 0 } }
+          - { id: U-A04, label: A04, kind: ev, routeId: upper-main, geometry: { x: 33, y: 15, width: 5, height: 10, rotation: 0 } }
+      - id: upper-east
+        name: EAST BAY
+        geometry: { points: [{ x: 73, y: 8 }, { x: 113, y: 8 }, { x: 113, y: 29 }, { x: 73, y: 29 }] }
+        labelAt: { x: 75, y: 12 }
         spots:
-          - { id: U-B01, label: B01, kind: standard, routeId: upper-main, geometry: { x: 75, y: 14, width: 5, height: 10, rotation: 0 } }
-          - { id: U-B02, label: B02, kind: standard, routeId: upper-main, geometry: { x: 81, y: 14, width: 5, height: 10, rotation: 0 } }
-          - { id: U-B03, label: B03, kind: standard, routeId: upper-main, geometry: { x: 87, y: 14, width: 5, height: 10, rotation: 0 } }
-          - { id: U-B04, label: B04, kind: accessible, routeId: upper-main, geometry: { x: 93, y: 14, width: 5, height: 10, rotation: 0 } }
-          - { id: U-B05, label: B05, kind: standard, routeId: upper-main, geometry: { x: 99, y: 14, width: 5, height: 10, rotation: 0 } }
-      - id: upper-c
-        name: UPPER C
-        geometry: { points: [{ x: 8, y: 53 }, { x: 51, y: 53 }, { x: 51, y: 73 }, { x: 8, y: 73 }] }
-        labelAt: { x: 9, y: 56 }
-        spots:
-          - { id: U-C01, label: C01, kind: standard, routeId: upper-main, geometry: { x: 12, y: 60, width: 5, height: 8, rotation: 0 } }
-          - { id: U-C02, label: C02, kind: standard, routeId: upper-main, geometry: { x: 18, y: 60, width: 5, height: 8, rotation: 0 } }
-          - { id: U-C03, label: C03, kind: ev, routeId: upper-main, geometry: { x: 24, y: 60, width: 5, height: 8, rotation: 0 } }
-          - { id: U-C04, label: C04, kind: standard, routeId: upper-main, geometry: { x: 30, y: 60, width: 5, height: 8, rotation: 0 } }
-          - { id: U-C05, label: C05, kind: standard, routeId: upper-main, geometry: { x: 36, y: 60, width: 5, height: 8, rotation: 0 } }
-      - id: upper-d
-        name: UPPER D
-        geometry: { points: [{ x: 69, y: 53 }, { x: 112, y: 53 }, { x: 112, y: 73 }, { x: 69, y: 73 }] }
-        labelAt: { x: 70, y: 56 }
-        spots:
-          - { id: U-D01, label: D01, kind: standard, routeId: upper-main, geometry: { x: 75, y: 60, width: 5, height: 8, rotation: 0 } }
-          - { id: U-D02, label: D02, kind: standard, routeId: upper-main, geometry: { x: 81, y: 60, width: 5, height: 8, rotation: 0 } }
-          - { id: U-D03, label: D03, kind: accessible, routeId: upper-main, geometry: { x: 87, y: 60, width: 5, height: 8, rotation: 0 } }
-          - { id: U-D04, label: D04, kind: standard, routeId: upper-main, geometry: { x: 93, y: 60, width: 5, height: 8, rotation: 0 } }
-          - { id: U-D05, label: D05, kind: standard, routeId: upper-main, geometry: { x: 99, y: 60, width: 5, height: 8, rotation: 0 } }
+          - { id: U-B01, label: B01, kind: standard, routeId: upper-main, geometry: { x: 77, y: 15, width: 5, height: 10, rotation: 0 } }
+          - { id: U-B02, label: B02, kind: standard, routeId: upper-main, geometry: { x: 84, y: 15, width: 5, height: 10, rotation: 0 } }
+          - { id: U-B03, label: B03, kind: ev, routeId: upper-main, geometry: { x: 91, y: 15, width: 5, height: 10, rotation: 0 } }
+          - { id: U-B04, label: B04, kind: standard, routeId: upper-main, geometry: { x: 98, y: 15, width: 5, height: 10, rotation: 0 } }

@@ -1,0 +1,17 @@
+{
+  "name": "parking-garage-management-docs",
+  "private": true,
+  "description": "Static user-facing documentation for GitHub Pages.",
+  "scripts": {
+    "start": "docusaurus start --host 0.0.0.0",
+    "build": "docusaurus build",
+    "preview": "docusaurus serve --dir build --host 0.0.0.0 --port 4174"
+  },
+  "dependencies": {
+    "@docusaurus/core": "^3.10.2",
+    "@docusaurus/preset-classic": "^3.10.2",
+    "@docusaurus/theme-mermaid": "^3.10.2",
+    "@mermaid-js/layout-elk": "^0.1.9",
+    "@scalar/docusaurus": "^0.8.33"
+  }
+}

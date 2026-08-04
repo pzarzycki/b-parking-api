@@ -20,7 +20,7 @@ Authentication is a short-lived JWT bearer token issued by `POST /api/auth/login
 
 There is exactly one `garage_layout` record containing the original uploaded YAML document, a revision, content hash, uploader, and update timestamp. It is returned verbatim as `application/yaml` by `GET /api/garage/floor-plan` so the frontend has one simple visual-definition source.
 
-Admins replace it through `PUT /api/garage/floor-plan` using a JSON `{ "yaml": "..." }` body. The API parses and validates the document, then transactionally stores it and synchronizes relational floor, bay, and spot projections. Upload is the only layout-management interface; there are no independent floor, bay, or spot-definition CRUD APIs.
+Admins replace it through `PUT /api/garage/floor-plan` using a JSON `{ "yaml": "..." }` body. The API parses and validates the document, then transactionally stores it and synchronizes relational floor, bay, and spot projections. This alpha release intentionally resets parking sessions, current spot state, and audit history when replacing a layout; no prior layout data is retained. Upload is the only layout-management interface; there are no independent floor, bay, or spot-definition CRUD APIs.
 
 The layout document has this required shape:
 

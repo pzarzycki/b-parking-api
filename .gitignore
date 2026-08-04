@@ -1,3 +1,7 @@
 node_modules/
 coverage/
 artifacts/
+docs/website/.docusaurus/
+docs/website/build/
+docs/website/static/openapi.yaml
+docs/website/static/examples/
