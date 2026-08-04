@@ -32,6 +32,8 @@ jobs:
       - run: npm run docs:check
       - uses: actions/configure-pages@v5
         if: github.event_name == 'push'
+        with:
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name == 'push'
         with:
