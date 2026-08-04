@@ -1,4 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Parking">
-  <rect width="64" height="64" rx="12" fill="#1f6f50"/>
-  <path fill="#fff" d="M20 12h16c9 0 15 5 15 14s-6 14-15 14-15-5-15-14V12Zm9 8v12h7c4 0 6-2 6-6s-2-6-6-6h-7Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Parkline">
+  <defs>
+    <linearGradient id="background" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#173d4d"/>
+      <stop offset="1" stop-color="#0a6573"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="url(#background)"/>
+  <path d="M13 16.5A5.5 5.5 0 0 1 18.5 11h27A5.5 5.5 0 0 1 51 16.5v31A5.5 5.5 0 0 1 45.5 53h-27a5.5 5.5 0 0 1-5.5-5.5v-31Z" fill="#5ee0d5" fill-opacity=".18" stroke="#8df4e9" stroke-width="2"/>
+  <path d="M23 18h12.4c8.1 0 13.6 4.7 13.6 12.2 0 7.4-5.5 12.1-13.6 12.1H30v6.7h-7V18Zm7 6.6v11.1h5.1c4.2 0 6.7-1.9 6.7-5.5 0-3.7-2.5-5.6-6.7-5.6H30Z" fill="#fff"/>
+  <circle cx="18.5" cy="18.5" r="2.5" fill="#5ee0d5"/>
 </svg>
