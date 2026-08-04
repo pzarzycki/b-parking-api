@@ -30,6 +30,7 @@ session=$(node -e 'console.log(JSON.parse(process.argv[1]).id)' "$checked_in")
 curl -fsS -X POST "http://localhost:$api_port/api/parking-sessions/check-out" -H "authorization: Bearer $token" -H 'content-type: application/json' --data "{\"sessionId\":\"$session\"}" >/dev/null
 curl -fsS -X PATCH "http://localhost:$api_port/api/parking-spots/$spot" -H "authorization: Bearer $token" -H 'content-type: application/json' --data '{"status":"occupied","reason":"maintenance"}' >/dev/null
 curl -fsS -X PATCH "http://localhost:$api_port/api/parking-spots/$spot" -H "authorization: Bearer $token" -H 'content-type: application/json' --data '{"status":"available"}' >/dev/null
+API_URL="http://localhost:$api_port" npx tsx scripts/assert-events.ts
 curl -fsS -X POST "http://localhost:$api_port/api/users" -H "authorization: Bearer $token" -H 'content-type: application/json' --data '{"username":"integration-attendant","password":"password123","role":"attendant"}' >/dev/null
 audit=$(curl -fsS "http://localhost:$api_port/api/audit-events" -H "authorization: Bearer $token")
 node -e 'if(JSON.parse(process.argv[1]).total < 4) process.exit(1)' "$audit"
@@ -42,4 +43,4 @@ test "$invalid_status" = '422'
 curl -fsS -X PUT "http://localhost:$api_port/api/garage/floor-plan" -H "authorization: Bearer $token" -H 'content-type: application/json' --data "$layout" >/dev/null
 reset_history=$(curl -fsS "http://localhost:$api_port/api/parking-sessions" -H "authorization: Bearer $token")
 node -e 'if(JSON.parse(process.argv[1]).total !== 0) process.exit(1)' "$reset_history"
-echo 'Integration test passed: seed, login, list spots, check-in/out, manual occupancy, history, and layout reset.'
+echo 'Integration test passed: seed, login, live events, spot/session workflows, history, and layout reset.'

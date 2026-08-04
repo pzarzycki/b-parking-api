@@ -1,0 +1,8 @@
+# OpenAPI has no standard response shape for WebSocket messages. The only
+# successful response is the HTTP 101 upgrade, and the message schema is held
+# in the x-websocket-message extension rather than an HTTP content body.
+specs/openapi.yaml:
+  operation-2xx-response:
+    - '#/paths/~1api~1events/get/responses'
+  no-unused-components:
+    - '#/components/schemas/LiveEvent'

@@ -27,6 +27,10 @@ Operational requests use a short-lived JWT bearer token from `POST /api/auth/log
 4. The attendant checks the vehicle out to close its session and release its spot.
 5. Administrators use parking history and audit events to review prior activity.
 
+## Live updates
+
+Authenticated clients can exchange their bearer token for a single-use, 60-second WebSocket ticket, then connect to `/api/events?ticket=...`. The stream publishes floor-plan replacements, parking check-ins/check-outs, and manual spot-status changes. It has no replay; reconnecting clients fetch REST state before processing new events. The canonical API reference documents the ticket exchange and event envelope.
+
 ## Important concepts
 
 - There is one canonical garage layout. Replace it as a complete YAML document instead of managing floors or spots independently.

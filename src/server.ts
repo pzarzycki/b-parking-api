@@ -35,5 +35,5 @@ if (seedFloorPlan && await db.garageLayout.count() === 0) {
     await tx.auditEvent.create({ data: { actorId: admin.id, action: 'floor_plan_seeded', entityType: 'garage_layout', entityId: '1', details: { sha256 } } });
   });
 }
-const app = buildApp(db);
+const app = await buildApp(db);
 await app.listen({ host: '0.0.0.0', port: Number(process.env.PORT ?? 3000) });
