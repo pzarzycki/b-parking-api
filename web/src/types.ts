@@ -11,6 +11,18 @@ export type User = {
 
 export type Session = { token: string; user: User };
 
+export type WebSocketTicket = {
+  ticket: string;
+  expiresAt: string;
+};
+
+export type LiveEvent = {
+  id: string;
+  type: 'ready' | 'floor_plan.replaced' | 'parking.checked_in' | 'parking.checked_out' | 'spot.status_changed';
+  occurredAt: string;
+  data: Record<string, unknown>;
+};
+
 export type ParkingSpot = {
   id: string;
   floorId: string;
@@ -34,6 +46,13 @@ export type ParkingSession = {
   spotId: string;
   checkedInAt: string;
   checkedOutAt: string | null;
+};
+
+export type ParkingSessionPage = {
+  items: ParkingSession[];
+  page: number;
+  pageSize: number;
+  total: number;
 };
 
 export type Point = { x: number; y: number };

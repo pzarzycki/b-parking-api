@@ -1,4 +1,4 @@
-import type { ParkingSession, ParkingSpot, ParkingSpotPage, Session, User } from './types';
+import type { ParkingSession, ParkingSessionPage, ParkingSpot, ParkingSpotPage, Session, User, WebSocketTicket } from './types';
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -34,6 +34,10 @@ export class ApiClient {
     return this.request<User>('/api/auth/me');
   }
 
+  async webSocketTicket(): Promise<WebSocketTicket> {
+    return this.request<WebSocketTicket>('/api/auth/websocket-ticket', { method: 'POST' });
+  }
+
   async floorPlan(): Promise<string> {
     const response = await fetch('/api/garage/floor-plan', { headers: this.token ? { Authorization: `Bearer ${this.token}` } : undefined });
     if (!response.ok) {
@@ -56,8 +60,13 @@ export class ApiClient {
     return this.request<ParkingSession>('/api/parking-sessions/check-in', { method: 'POST', body: JSON.stringify({ licensePlate, ...(spotId ? { spotId } : {}) }) });
   }
 
-  async checkOut(licensePlate: string): Promise<ParkingSession> {
-    return this.request<ParkingSession>('/api/parking-sessions/check-out', { method: 'POST', body: JSON.stringify({ licensePlate }) });
+  async activeSessionForSpot(spotId: string): Promise<ParkingSession | null> {
+    const page = await this.request<ParkingSessionPage>('/api/parking-sessions?active=true&page=1&pageSize=100');
+    return page.items.find((session) => session.spotId === spotId) ?? null;
+  }
+
+  async checkOut(reference: { sessionId: string } | { licensePlate: string }): Promise<ParkingSession> {
+    return this.request<ParkingSession>('/api/parking-sessions/check-out', { method: 'POST', body: JSON.stringify(reference) });
   }
 
   async uploadFloorPlan(yaml: string): Promise<void> {
@@ -66,3 +75,10 @@ export class ApiClient {
 }
 
 export const api = new ApiClient();
+
+export function eventSocketUrl(ticket: string): string {
+  const url = new URL('/api/events', window.location.origin);
+  url.protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  url.searchParams.set('ticket', ticket);
+  return url.toString();
+}

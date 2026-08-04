@@ -57,6 +57,10 @@ code { border-radius: 3px; background: #edf2f3; padding: 1px 4px; color: #3d5965
 .page { max-width: 1600px; margin: 0 auto; padding: 27px 28px; }
 .page-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
 .page-heading .muted { margin: 7px 0 0; font-size: 12px; }
+.live-status { display: flex; align-items: center; gap: 5px; margin: 7px 0 0; color: #647983; font-size: 11px; }
+.live-status::before { width: 6px; height: 6px; border-radius: 50%; background: #93a8b0; content: ''; }
+.live-status.connected::before { background: #40b985; box-shadow: 0 0 0 3px rgb(64 185 133 / 14%); }
+.live-status.reconnecting::before, .live-status.connecting::before { background: #d99a34; }
 .heading-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
 .notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -7px 0 15px; border: 1px solid; border-radius: 4px; padding: 9px 11px; font-size: 12px; }
 .notice.error { border-color: #efc4bc; background: #fff4f1; color: #943729; }
