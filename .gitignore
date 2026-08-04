@@ -1,7 +1,13 @@
 node_modules/
 coverage/
 artifacts/
+web/dist/
 docs/website/.docusaurus/
 docs/website/build/
 docs/website/static/openapi.yaml
 docs/website/static/examples/
+docs/website/static/img/floor-plans/
+
+.env
+.env.*
+!.env.example
