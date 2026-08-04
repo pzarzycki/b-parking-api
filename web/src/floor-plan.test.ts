@@ -27,8 +27,9 @@ describe('parseFloorPlan', () => {
   it('normalizes the canonical visual layout for the interactive SVG', () => {
     const plan = parseFloorPlan(yaml);
     expect(plan.garage.name).toBe('Demo Garage');
-    expect(plan.floors[0].features.map((feature) => feature.type)).toEqual(['wall', 'lane', 'gate']);
-    expect(plan.floors[0].bays[0].spots[0]).toMatchObject({ id: 'A01', number: 'A01', geometry: { orientation: 90 } });
+    expect(plan.floors[0].routes.map((route) => route.kind)).toEqual(['driveAisle']);
+    expect(plan.floors[0].gates[0].direction).toBe('inbound');
+    expect(plan.floors[0].bays[0].spots[0]).toMatchObject({ id: 'A01', label: 'A01', geometry: { rotation: 90 } });
   });
 
   it('rejects non-version-1 documents', () => {

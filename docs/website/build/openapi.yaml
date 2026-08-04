@@ -15,6 +15,8 @@ servers:
 tags:
   - name: Authentication
     description: Obtain and inspect JWT credentials for API users.
+  - name: Events
+    description: Receive live parking and layout changes through an authenticated WebSocket connection.
   - name: Floor plan
     description: Download the public visualization document or replace the canonical layout as an admin.
   - name: Parking spots
@@ -54,6 +56,35 @@ paths:
       security: [{ bearerAuth: [] }]
       responses:
         '200': { description: Current user., content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/auth/websocket-ticket:
+    post:
+      tags: [Authentication]
+      summary: Create a WebSocket ticket
+      description: Exchanges the caller's bearer token for a single-use, short-lived ticket. Browser WebSocket clients use the ticket to connect without placing their JWT in a query string.
+      operationId: createWebSocketTicket
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: One-time WebSocket ticket., content: { application/json: { schema: { $ref: '#/components/schemas/WebSocketTicket' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/events:
+    get:
+      tags: [Events]
+      summary: Stream live garage events
+      description: Upgrades to a WebSocket connection using a single-use ticket from the WebSocket-ticket endpoint. The stream sends a ready message, then live floor-plan, parking-session, and spot-status events. Fetch REST state again after reconnect; replay is not provided in this alpha release.
+      operationId: streamEvents
+      security: []
+      parameters:
+        - name: ticket
+          in: query
+          required: true
+          description: Single-use ticket returned by the authenticated WebSocket-ticket endpoint.
+          schema: { type: string, format: uuid }
+      responses:
+        '101':
+          description: WebSocket protocol upgrade accepted.
+          x-websocket-message:
+            $ref: '#/components/schemas/LiveEvent'
         '401': { $ref: '#/components/responses/Unauthorized' }
   /api/garage/floor-plan:
     get:
@@ -279,6 +310,8 @@ components:
   schemas:
     LoginRequest: { type: object, required: [username, password], properties: { username: { type: string, minLength: 1 }, password: { type: string, minLength: 1 } }, additionalProperties: false }
     AuthToken: { type: object, required: [token, user], properties: { token: { type: string }, user: { $ref: '#/components/schemas/User' } } }
+    WebSocketTicket: { type: object, required: [ticket, expiresAt], properties: { ticket: { type: string, format: uuid }, expiresAt: { type: string, format: date-time } } }
+    LiveEvent: { type: object, required: [id, type, occurredAt, data], properties: { id: { type: string, format: uuid }, type: { type: string, enum: [ready, floor_plan.replaced, parking.checked_in, parking.checked_out, spot.status_changed] }, occurredAt: { type: string, format: date-time }, data: { type: object, additionalProperties: true } } }
     Role: { type: string, enum: [admin, attendant] }
     User: { type: object, required: [id, username, role, active, createdAt, updatedAt], properties: { id: { type: string, format: uuid }, username: { type: string }, role: { $ref: '#/components/schemas/Role' }, active: { type: boolean }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time } } }
     CreateUserRequest: { type: object, required: [username, password, role], properties: { username: { type: string, minLength: 1, maxLength: 100 }, password: { type: string, minLength: 8 }, role: { $ref: '#/components/schemas/Role' } }, additionalProperties: false }

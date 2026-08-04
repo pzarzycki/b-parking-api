@@ -21,6 +21,13 @@ export type ParkingSpot = {
   manualReason?: string | null;
 };
 
+export type ParkingSpotPage = {
+  items: ParkingSpot[];
+  page: number;
+  pageSize: number;
+  total: number;
+};
+
 export type ParkingSession = {
   id: string;
   licensePlate: string;
@@ -31,28 +38,30 @@ export type ParkingSession = {
 
 export type Point = { x: number; y: number };
 
-export type PlanFeature = {
-  id: string;
-  type: 'lane' | 'way' | 'wall' | 'gate';
-  direction?: 'in' | 'out';
-  points: Point[];
-};
-
 export type PlanSpot = {
   id: string;
-  number: string;
-  geometry: { x: number; y: number; width: number; height: number; orientation: number };
+  label: string;
+  kind: 'standard' | 'accessible' | 'ev';
+  routeId: string;
+  geometry: { x: number; y: number; width: number; height: number; rotation: number };
 };
 
-export type PlanBay = { id: string; name: string; spots: PlanSpot[] };
+export type Polygon = { points: Point[] };
+export type PlanBay = { id: string; name: string; geometry: Polygon; labelAt: Point; spots: PlanSpot[] };
+export type PlanRoute = { id: string; kind: 'driveAisle' | 'way' | 'ramp'; direction: 'oneWay' | 'twoWay'; geometry: Polygon; centerline: Point[]; connectsTo: string[] };
+export type PlanGate = { id: string; direction: 'inbound' | 'outbound'; opening: [Point, Point]; connectsTo: string };
+export type PlanAmenity = { id: string; type: 'lift' | 'stairs' | 'column' | 'wall'; geometry: Polygon; label: string };
 
 export type FloorPlanFloor = {
   id: string;
   level: number;
   name: string;
   canvas: { width: number; height: number };
+  footprint: Polygon;
+  routes: PlanRoute[];
+  gates: PlanGate[];
+  amenities: PlanAmenity[];
   bays: PlanBay[];
-  features: PlanFeature[];
 };
 
 export type FloorPlan = {

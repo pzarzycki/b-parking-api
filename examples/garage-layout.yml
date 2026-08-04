@@ -36,6 +36,26 @@ floors:
           - { id: G-B02, label: B02, kind: standard, routeId: ground-main, geometry: { x: 84, y: 15, width: 5, height: 10, rotation: 0 } }
           - { id: G-B03, label: B03, kind: ev, routeId: ground-main, geometry: { x: 91, y: 15, width: 5, height: 10, rotation: 0 } }
           - { id: G-B04, label: B04, kind: standard, routeId: ground-main, geometry: { x: 98, y: 15, width: 5, height: 10, rotation: 0 } }
+      - id: ground-south-west
+        name: SOUTH BAY C
+        geometry: { points: [{ x: 8, y: 52 }, { x: 48, y: 52 }, { x: 48, y: 73 }, { x: 8, y: 73 }] }
+        labelAt: { x: 10, y: 56 }
+        spots:
+          - { id: G-C01, label: C01, kind: standard, routeId: ground-main, geometry: { x: 12, y: 60, width: 5, height: 8, rotation: 0 } }
+          - { id: G-C02, label: C02, kind: standard, routeId: ground-main, geometry: { x: 19, y: 60, width: 5, height: 8, rotation: 0 } }
+          - { id: G-C03, label: C03, kind: standard, routeId: ground-main, geometry: { x: 26, y: 60, width: 5, height: 8, rotation: 0 } }
+          - { id: G-C04, label: C04, kind: standard, routeId: ground-main, geometry: { x: 33, y: 60, width: 5, height: 8, rotation: 0 } }
+          - { id: G-C05, label: C05, kind: standard, routeId: ground-main, geometry: { x: 40, y: 60, width: 5, height: 8, rotation: 0 } }
+      - id: ground-south-east
+        name: SOUTH BAY D
+        geometry: { points: [{ x: 73, y: 52 }, { x: 113, y: 52 }, { x: 113, y: 73 }, { x: 73, y: 73 }] }
+        labelAt: { x: 75, y: 56 }
+        spots:
+          - { id: G-D01, label: D01, kind: standard, routeId: ground-main, geometry: { x: 77, y: 60, width: 5, height: 8, rotation: 0 } }
+          - { id: G-D02, label: D02, kind: standard, routeId: ground-main, geometry: { x: 84, y: 60, width: 5, height: 8, rotation: 0 } }
+          - { id: G-D03, label: D03, kind: standard, routeId: ground-main, geometry: { x: 91, y: 60, width: 5, height: 8, rotation: 0 } }
+          - { id: G-D04, label: D04, kind: standard, routeId: ground-main, geometry: { x: 98, y: 60, width: 5, height: 8, rotation: 0 } }
+          - { id: G-D05, label: D05, kind: standard, routeId: ground-main, geometry: { x: 105, y: 60, width: 5, height: 8, rotation: 0 } }
   - id: upper
     level: 1
     name: Upper floor

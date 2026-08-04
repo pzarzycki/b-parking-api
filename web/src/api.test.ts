@@ -21,4 +21,13 @@ describe('ApiClient', () => {
     await expect(new ApiClient('token-123').checkOut('ABC 123')).rejects.toEqual(expect.objectContaining({ status: 404, message: 'No active session found.' }));
     expect((fetchMock.mock.calls[0][1] as RequestInit).body).toBe(JSON.stringify({ licensePlate: 'ABC 123' }));
   });
+
+  it('collects every paginated parking-space result', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ items: [{ id: 'A' }], page: 1, pageSize: 100, total: 101 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ items: [{ id: 'B' }], page: 2, pageSize: 100, total: 101 }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(new ApiClient('token-123').spots()).resolves.toEqual([{ id: 'A' }, { id: 'B' }]);
+    expect(fetchMock.mock.calls.map((call) => call[0])).toEqual(['/api/parking-spots?page=1&pageSize=100', '/api/parking-spots?page=2&pageSize=100']);
+  });
 });

@@ -18,8 +18,8 @@ const valueAfter = (flag: string): string | undefined => {
   const index = args.indexOf(flag);
   return index === -1 ? undefined : args[index + 1];
 };
-const input = args.find((value, index) => !value.startsWith('--') && !['--floor', '--output', '--status'].includes(args[index - 1]));
-if (!input) throw new Error('Usage: tsx scripts/render-floor-plan.ts <plan.yml> [--floor <id>] [--output <file.svg>] [--status <file>] [--check]');
+const input = args.find((value, index) => !value.startsWith('--') && !['--floor', '--output'].includes(args[index - 1]));
+if (!input) throw new Error('Usage: tsx scripts/render-floor-plan.ts <plan.yml> [--floor <id>] [--output <file.svg>] [--check]');
 
 const raw = await readFile(resolve(input), 'utf8');
 const document = YAML.parseDocument(raw, { prettyErrors: true, uniqueKeys: true });
@@ -95,8 +95,6 @@ if (args.includes('--check')) {
 const floorId = valueAfter('--floor') ?? plan.floors[0].id;
 const floor = plan.floors.find((item) => item.id === floorId);
 if (!floor) throw new Error(`Unknown floor: ${floorId}`);
-const statusPath = valueAfter('--status');
-const statuses: Record<string, 'available' | 'occupied' | 'manual'> = statusPath ? JSON.parse(await readFile(resolve(statusPath), 'utf8')) : {};
 const esc = (value: string) => value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!);
 const points = (items: Point[]) => items.map(({ x, y }) => `${x},${y}`).join(' ');
 const polygon = (shape: Polygon, className: string) => `<polygon class="${className}" points="${points(shape.points)}"/>`;
@@ -107,8 +105,7 @@ const spots = floor.bays.flatMap((bay) => bay.spots).map((spot) => {
   const geometry = spot.geometry;
   const cx = geometry.x + geometry.width / 2;
   const cy = geometry.y + geometry.height / 2;
-  const status = statuses[spot.id] ?? 'available';
-  return `<g transform="rotate(${geometry.rotation} ${cx} ${cy})"><rect class="spot ${spot.kind} ${status}" x="${geometry.x}" y="${geometry.y}" width="${geometry.width}" height="${geometry.height}" rx="0.45"/><text class="spot-label" x="${cx}" y="${cy + .55}">${esc(spot.label)}</text></g>`;
+  return `<g transform="rotate(${geometry.rotation} ${cx} ${cy})"><rect class="spot available" x="${geometry.x}" y="${geometry.y}" width="${geometry.width}" height="${geometry.height}" rx="0.45"/><text class="spot-label" x="${cx}" y="${cy + .55}">${esc(spot.label)}</text></g>`;
 }).join('');
 const gates = floor.gates.map((gate) => {
   const [a, b] = gate.opening;
@@ -116,7 +113,7 @@ const gates = floor.gates.map((gate) => {
   const y = (a.y + b.y) / 2;
   return `<line class="gate ${gate.direction}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/><text class="gate-label" x="${x}" y="${y - 2}">${gate.direction === 'inbound' ? 'IN' : 'OUT'}</text>`;
 }).join('');
-const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -14 ${floor.canvas.width} ${floor.canvas.height + 14}" role="img" aria-label="${esc(plan.garage.name)} ${esc(floor.name)}"><style>text{font-family:Arial,sans-serif}.shell{fill:#102a3a}.bay{fill:#e8f1f4;stroke:#c4d4dc;stroke-width:.35}.route{fill:#5b7380}.route.ramp{fill:#425f70;stroke:#d5e4e9;stroke-width:.25}.centreline{fill:none;stroke:#dbe7eb;stroke-width:.35;stroke-dasharray:1.4 1.1}.bay-label{fill:#55707d;font-size:2.2px;font-weight:700}.spot{stroke-width:.32}.spot.available{fill:#f9fcfd}.spot.occupied{fill:#ffd9d1;stroke:#d95c45;stroke-width:.5}.spot.manual{fill:#fce4a9;stroke:#b98214;stroke-width:.5}.spot.accessible.available{fill:#cfe9ff;stroke:#2685c7}.spot.ev.available{fill:#d9f3dc;stroke:#27854a}.spot-label{fill:#26434f;font-size:1.45px;text-anchor:middle;font-weight:700}.gate{stroke-width:1.5}.gate.inbound{stroke:#31b47d}.gate.outbound{stroke:#ff765b}.gate-label{font-size:1.7px;font-weight:800;text-anchor:middle;fill:#fff}.amenity{fill:#f8c56c;stroke:#8d6425;stroke-width:.35}.amenity-label{font-size:1.5px;font-weight:700;fill:#513912}</style><rect x="0" y="-14" width="100%" height="${floor.canvas.height + 14}" fill="#f4f7f8"/>${polygon(floor.footprint, 'shell')}<g>${routes}${bays}${amenities}${spots}${gates}</g><text x="4" y="-8" font-size="3" font-weight="800" fill="#143243">${esc(plan.garage.name)}</text><text x="4" y="-4.5" font-size="1.8" fill="#53717f">${esc(floor.name)} · Level ${floor.level} · white open · red occupied · amber manual</text></svg>`;
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -14 ${floor.canvas.width} ${floor.canvas.height + 14}" role="img" aria-label="${esc(plan.garage.name)} ${esc(floor.name)}"><style>text{font-family:Arial,sans-serif}.shell{fill:#102a3a}.bay{fill:#e8f1f4;stroke:#c4d4dc;stroke-width:.35}.route{fill:#5b7380}.route.ramp{fill:#425f70;stroke:#d5e4e9;stroke-width:.25}.centreline{fill:none;stroke:#dbe7eb;stroke-width:.35;stroke-dasharray:1.4 1.1}.bay-label{fill:#55707d;font-size:2.2px;font-weight:700}.spot{stroke:#6e8997;stroke-width:.32}.spot.available{fill:#f9fcfd}.spot.occupied{fill:#ffd9d1;stroke:#d95c45;stroke-width:.5}.spot.manual{fill:#fce4a9;stroke:#b98214;stroke-width:.5}.spot-label{fill:#26434f;font-size:1.45px;text-anchor:middle;font-weight:700}.gate{stroke-width:1.5}.gate.inbound{stroke:#31b47d}.gate.outbound{stroke:#ff765b}.gate-label{font-size:1.7px;font-weight:800;text-anchor:middle;fill:#fff}.amenity{fill:#f8c56c;stroke:#8d6425;stroke-width:.35}.amenity-label{font-size:1.5px;font-weight:700;fill:#513912}</style><rect x="0" y="-14" width="100%" height="${floor.canvas.height + 14}" fill="#f4f7f8"/>${polygon(floor.footprint, 'shell')}<g>${routes}${bays}${amenities}${spots}${gates}</g><text x="4" y="-8" font-size="3" font-weight="800" fill="#143243">${esc(plan.garage.name)}</text><text x="4" y="-4.5" font-size="1.8" fill="#53717f">${esc(floor.name)} · Level ${floor.level} · white open · red occupied · amber manual</text></svg>`;
 const output = valueAfter('--output') ?? `${basename(input, '.yml')}-${floor.id}.svg`;
 await writeFile(resolve(output), svg);
 console.log(JSON.stringify({ floor: floor.id, bays: floor.bays.length, spots: floor.bays.flatMap((bay) => bay.spots).length, output: resolve(output) }));

@@ -1,4 +1,4 @@
-import type { FloorPlan, ParkingSession, ParkingSpot, Session, User } from './types';
+import type { ParkingSession, ParkingSpot, ParkingSpotPage, Session, User } from './types';
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -44,7 +44,12 @@ export class ApiClient {
   }
 
   async spots(): Promise<ParkingSpot[]> {
-    return this.request<ParkingSpot[]>('/api/parking-spots');
+    const pageSize = 100;
+    const first = await this.request<ParkingSpotPage>('/api/parking-spots?page=1&pageSize=100');
+    const pages = Math.ceil(first.total / pageSize);
+    if (pages <= 1) return first.items;
+    const remaining = await Promise.all(Array.from({ length: pages - 1 }, (_, index) => this.request<ParkingSpotPage>(`/api/parking-spots?page=${index + 2}&pageSize=100`)));
+    return [first, ...remaining].flatMap((page) => page.items);
   }
 
   async checkIn(licensePlate: string, spotId?: string): Promise<ParkingSession> {
