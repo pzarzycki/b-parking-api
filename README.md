@@ -7,6 +7,8 @@
 <p align="center">
   <a href="https://pzarzycki.github.io/b-parking-api/"><img src="https://img.shields.io/badge/Live_documentation-GitHub_Pages-1f6f50?style=for-the-badge&logo=github" alt="Live documentation"></a>
   <a href="https://github.com/pzarzycki/b-parking-api/actions/workflows/docs-pages.yml"><img src="https://github.com/pzarzycki/b-parking-api/actions/workflows/docs-pages.yml/badge.svg?branch=main" alt="Documentation workflow"></a>
+  <a href="https://github.com/pzarzycki/b-parking-api/actions/workflows/unit-tests.yml"><img src="https://github.com/pzarzycki/b-parking-api/actions/workflows/unit-tests.yml/badge.svg?branch=main" alt="Unit tests"></a>
+  <a href="https://github.com/pzarzycki/b-parking-api/actions/workflows/integration-tests.yml"><img src="https://github.com/pzarzycki/b-parking-api/actions/workflows/integration-tests.yml/badge.svg?branch=main" alt="Integration tests"></a>
   <img src="https://img.shields.io/badge/OpenAPI-3.1-6BA539?style=flat-square&logo=openapiinitiative" alt="OpenAPI 3.1">
   <img src="https://img.shields.io/badge/Node.js-22%2B-339933?style=flat-square&logo=nodedotjs" alt="Node.js 22 or later">
   <img src="https://img.shields.io/badge/Status-alpha-E67E22?style=flat-square" alt="Alpha status">
@@ -77,6 +79,8 @@ npm run web:build              # build the dashboard
 npm run floor-plan:validate    # validate examples/garage-layout.yml and renderer constraints
 npm run floor-plan:render -- examples/garage-layout.yml --floor ground --output ground.svg
 ```
+
+GitHub Actions runs the unit and integration suites independently on pull requests and pushes to `main`. The integration workflow uses its own Compose project and removes the disposable PostgreSQL volume after every run.
 
 ## Project references
 
