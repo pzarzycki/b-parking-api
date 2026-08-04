@@ -9,5 +9,6 @@ describe('parseLiveEvent', () => {
   it('ignores malformed messages', () => {
     expect(parseLiveEvent('{not json')).toBeNull();
     expect(parseLiveEvent(JSON.stringify({ type: 'ready' }))).toBeNull();
+    expect(parseLiveEvent(JSON.stringify({ id: 'event-1', type: 'unknown', occurredAt: '2026-01-01T00:00:00Z', data: {} }))).toBeNull();
   });
 });

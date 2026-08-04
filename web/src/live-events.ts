@@ -3,12 +3,13 @@ import { ApiError, ApiClient, eventSocketUrl } from './api';
 import type { LiveEvent } from './types';
 
 export type LiveConnection = 'connecting' | 'connected' | 'reconnecting';
+const liveEventTypes = new Set<LiveEvent['type']>(['ready', 'floor_plan.replaced', 'parking.checked_in', 'parking.checked_out', 'spot.status_changed']);
 
 function parseLiveEvent(data: unknown): LiveEvent | null {
   if (typeof data !== 'string') return null;
   try {
     const event = JSON.parse(data) as Partial<LiveEvent>;
-    return typeof event.id === 'string' && typeof event.type === 'string' && typeof event.occurredAt === 'string' && event.data && typeof event.data === 'object'
+    return typeof event.id === 'string' && typeof event.type === 'string' && liveEventTypes.has(event.type as LiveEvent['type']) && typeof event.occurredAt === 'string' && event.data && typeof event.data === 'object' && !Array.isArray(event.data)
       ? event as LiveEvent
       : null;
   } catch {
@@ -37,12 +38,14 @@ export function useLiveGarageEvents(client: ApiClient, onEvent: (event: LiveEven
 
     const connect = async () => {
       if (disposed) return;
+      retryTimer = undefined;
       setConnection(attempts ? 'reconnecting' : 'connecting');
       try {
         const { ticket } = await client.webSocketTicket();
         if (disposed) return;
-        socket = new WebSocket(eventSocketUrl(ticket));
-        socket.addEventListener('message', (message) => {
+        const nextSocket = new WebSocket(eventSocketUrl(ticket));
+        socket = nextSocket;
+        nextSocket.addEventListener('message', (message) => {
           const event = parseLiveEvent(message.data);
           if (!event) return;
           if (event.type === 'ready') {
@@ -51,8 +54,8 @@ export function useLiveGarageEvents(client: ApiClient, onEvent: (event: LiveEven
           }
           latestEvent.current(event);
         });
-        socket.addEventListener('close', () => retry());
-        socket.addEventListener('error', () => socket?.close());
+        nextSocket.addEventListener('close', () => { if (socket === nextSocket) retry(); });
+        nextSocket.addEventListener('error', () => nextSocket.close());
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) latestUnauthorized.current();
         else retry();

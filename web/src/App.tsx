@@ -3,7 +3,7 @@ import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate 
 import { ApiClient, ApiError, api } from './api';
 import { parseFloorPlan } from './floor-plan';
 import { useLiveGarageEvents } from './live-events';
-import type { FloorPlan, FloorPlanFloor, ParkingSpot, Session } from './types';
+import type { FloorPlan, FloorPlanFloor, HistoryEventCounts, OccupancyHistory, ParkingSpot, Session } from './types';
 
 const SESSION_KEY = 'parkline.session';
 
@@ -37,12 +37,12 @@ function LoginPage({ onSignIn }: { onSignIn: (session: Session) => void }) {
 function AuthenticatedApp({ session, signOut }: { session: Session; signOut: () => void }) {
   const [navOpen, setNavOpen] = useState(false);
   const client = useMemo(() => api.withToken(session.token), [session.token]);
-  return <div className="app-shell"><Sidebar admin={session.user.role === 'admin'} open={navOpen} close={() => setNavOpen(false)} /><main className="app-main"><TopBar user={session.user.username} onMenu={() => setNavOpen(true)} signOut={signOut} /><Routes><Route path="/" element={<Dashboard client={client} onUnauthorized={signOut} />} /><Route path="/layout" element={session.user.role === 'admin' ? <LayoutPage client={client} /> : <Navigate to="/" replace />} /><Route path="*" element={<Navigate to="/" replace />} /></Routes></main></div>;
+  return <div className="app-shell"><Sidebar admin={session.user.role === 'admin'} open={navOpen} close={() => setNavOpen(false)} /><main className="app-main"><TopBar user={session.user.username} onMenu={() => setNavOpen(true)} signOut={signOut} /><Routes><Route path="/" element={<Dashboard client={client} onUnauthorized={signOut} />} /><Route path="/history" element={<HistoryPage client={client} onUnauthorized={signOut} />} /><Route path="/layout" element={session.user.role === 'admin' ? <LayoutPage client={client} /> : <Navigate to="/" replace />} /><Route path="*" element={<Navigate to="/" replace />} /></Routes></main></div>;
 }
 
 function Sidebar({ admin, open, close }: { admin: boolean; open: boolean; close: () => void }) {
   const location = useLocation();
-  return <><button className={open ? 'nav-scrim visible' : 'nav-scrim'} aria-label="Close navigation" onClick={close} /><aside className={`sidebar ${open ? 'open' : ''}`}><div className="sidebar-brand"><div className="brand-mark small">P</div><span>Parkline</span></div><nav><p className="nav-heading">OPERATIONS</p><Link className={location.pathname === '/' ? 'nav-link active' : 'nav-link'} to="/" onClick={close}><span>▦</span> Garage</Link>{admin && <><p className="nav-heading admin-heading">ADMINISTRATION</p><Link className={location.pathname === '/layout' ? 'nav-link active' : 'nav-link'} to="/layout" onClick={close}><span>⌘</span> Layout</Link></>}</nav><div className="sidebar-footer"><span className="live-dot" /> API connected</div></aside></>;
+  return <><button className={open ? 'nav-scrim visible' : 'nav-scrim'} aria-label="Close navigation" onClick={close} /><aside className={`sidebar ${open ? 'open' : ''}`}><div className="sidebar-brand"><div className="brand-mark small">P</div><span>Parkline</span></div><nav><p className="nav-heading">OPERATIONS</p><Link className={location.pathname === '/' ? 'nav-link active' : 'nav-link'} to="/" onClick={close}><span>▦</span> Garage</Link><Link className={location.pathname === '/history' ? 'nav-link active' : 'nav-link'} to="/history" onClick={close}><span>⌁</span> History</Link>{admin && <><p className="nav-heading admin-heading">ADMINISTRATION</p><Link className={location.pathname === '/layout' ? 'nav-link active' : 'nav-link'} to="/layout" onClick={close}><span>⌘</span> Layout</Link></>}</nav><div className="sidebar-footer"><span className="live-dot" /> API connected</div></aside></>;
 }
 
 function TopBar({ user, onMenu, signOut }: { user: string; onMenu: () => void; signOut: () => void }) {
@@ -82,7 +82,71 @@ function Dashboard({ client, onUnauthorized }: { client: ApiClient; onUnauthoriz
   return <section className="page dashboard"><div className="page-heading"><div><p className="eyebrow">LIVE OVERVIEW</p><h1>{plan?.garage.name ?? 'Garage'}</h1><p className={`live-status ${liveConnection}`} role="status">{liveConnection === 'connected' ? 'Live updates connected' : liveConnection === 'reconnecting' ? 'Reconnecting live updates…' : 'Connecting live updates…'}</p></div><div className="heading-actions"><button className="button secondary" onClick={() => void load()} disabled={loading}>↻ Refresh</button><button className="button secondary" onClick={() => { setCheckoutSelected(false); setDialog('check-out'); }}>Check out</button><button className="button primary" onClick={() => setDialog('check-in')}>+ Check in</button></div></div>{error && <div className="notice error" role="alert">{error}<button onClick={() => void load()}>Try again</button></div>}{message && <div className="notice success">{message}</div>}<div className="metric-row"><Metric label="Available" value={counts.available} accent="available" /><Metric label="Occupied" value={counts.occupied} accent="occupied" /><Metric label="Total spaces" value={counts.total} accent="neutral" /></div><div className="workspace"><div className="map-pane"><div className="map-toolbar"><div className="floor-tabs" role="tablist">{plan?.floors.map((item) => <button key={item.id} role="tab" aria-selected={floorId === item.id} className={floorId === item.id ? 'floor-tab active' : 'floor-tab'} onClick={() => { setFloorId(item.id); setSelected(null); }}>{item.name}<small>L{item.level}</small></button>)}</div><div className="filter-group" aria-label="Space status filter">{(['all', 'available', 'occupied'] as const).map((item) => <button key={item} className={filter === item ? 'filter active' : 'filter'} onClick={() => setFilter(item)}>{item}</button>)}</div></div>{loading && !plan ? <div className="map-empty">Loading garage…</div> : floor ? <FloorMap floor={floor} spots={floorSpots} visibleIds={filteredIds} selectedId={selected?.id} onSelect={(spot) => setSelected(spot)} /> : <div className="map-empty">No floor plan has been uploaded.</div>}<div className="map-legend"><span><i className="legend-dot available" /> Available</span><span><i className="legend-dot occupied" /> Vehicle occupied</span><span><i className="legend-dot manual" /> Manual hold</span></div></div><SpotPanel spot={selected} onClose={() => setSelected(null)} onCheckIn={() => setDialog('check-in')} onCheckOut={() => { setCheckoutSelected(true); setDialog('check-out'); }} /></div>{dialog && <OperationDialog mode={dialog} selectedSpot={dialog === 'check-in' || checkoutSelected ? selected : null} client={client} close={() => { setCheckoutSelected(false); setDialog(null); }} complete={async (nextMessage, spotId) => { setCheckoutSelected(false); setDialog(null); const refreshed = await load(); if (spotId) setSelected(refreshed?.find((spot) => spot.id === spotId) ?? null); setMessage(nextMessage); }} />}</section>;
 }
 
-function Metric({ label, value, accent }: { label: string; value: number; accent: string }) { return <div className={`metric ${accent}`}><span>{label}</span><strong>{value}</strong></div>; }
+function HistoryPage({ client, onUnauthorized }: { client: ApiClient; onUnauthorized: () => void }) {
+  const [plan, setPlan] = useState<FloorPlan | null>(null);
+  const [spots, setSpots] = useState<ParkingSpot[]>([]);
+  const [floorId, setFloorId] = useState('');
+  const [bayId, setBayId] = useState('');
+  const [spotId, setSpotId] = useState('');
+  const [preset, setPreset] = useState<'24h' | '7d' | '30d' | 'custom'>('7d');
+  const [customFrom, setCustomFrom] = useState(() => localDate(new Date(Date.now() - 6 * 24 * 60 * 60 * 1000)));
+  const [customTo, setCustomTo] = useState(() => localDate(new Date()));
+  const [report, setReport] = useState<OccupancyHistory | null>(null);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const selectedFloor = plan?.floors.find((floor) => floor.id === floorId) ?? null;
+  const bays = selectedFloor?.bays ?? [];
+  const selectedBay = bays.find((bay) => bay.id === bayId) ?? null;
+  const baySpots = spots.filter((spot) => spot.bayId === bayId);
+  const range = useMemo(() => reportRange(preset, customFrom, customTo), [preset, customFrom, customTo]);
+
+  useEffect(() => { void (async () => {
+    try {
+      const [yaml, nextSpots] = await Promise.all([client.floorPlan(), client.spots()]);
+      const nextPlan = parseFloorPlan(yaml); const firstFloor = nextPlan.floors[0]; const firstBay = firstFloor?.bays[0];
+      setPlan(nextPlan); setSpots(nextSpots); setFloorId(firstFloor?.id ?? ''); setBayId(firstBay?.id ?? '');
+    } catch (cause) { if (cause instanceof ApiError && cause.status === 401) onUnauthorized(); else setError(errorMessage(cause)); } finally { setLoading(false); }
+  })(); }, [client, onUnauthorized]);
+
+  useEffect(() => { void (async () => {
+    if (!bayId || !range) { setReport(null); return; }
+    setError(''); setLoading(true);
+    try { setReport(await client.occupancyHistory({ bayId, ...(spotId ? { spotId } : {}), from: range.from.toISOString(), to: range.to.toISOString() })); }
+    catch (cause) { if (cause instanceof ApiError && cause.status === 401) onUnauthorized(); else setError(errorMessage(cause)); }
+    finally { setLoading(false); }
+  })(); }, [bayId, spotId, range, client, onUnauthorized]);
+
+  const selectFloor = (nextFloorId: string) => { const nextFloor = plan?.floors.find((floor) => floor.id === nextFloorId); setFloorId(nextFloorId); setBayId(nextFloor?.bays[0]?.id ?? ''); setSpotId(''); };
+  return <section className="page history-page"><div className="page-heading"><div><p className="eyebrow">ASSET ANALYTICS</p><h1>History</h1><p className="muted">Review occupancy and activity for a bay or individual stall. Times use your local time zone.</p></div></div><section className="history-controls" aria-label="History filters"><label>Floor<select value={floorId} onChange={(event) => selectFloor(event.target.value)} disabled={!plan}>{plan?.floors.map((floor) => <option key={floor.id} value={floor.id}>{floor.name}</option>)}</select></label><label>Bay<select value={bayId} onChange={(event) => { setBayId(event.target.value); setSpotId(''); }} disabled={!selectedFloor}>{bays.map((bay) => <option key={bay.id} value={bay.id}>{bay.name}</option>)}</select></label><label>Asset<select value={spotId} onChange={(event) => setSpotId(event.target.value)} disabled={!selectedBay}><option value="">Entire bay</option>{baySpots.map((spot) => <option key={spot.id} value={spot.id}>{spot.number}</option>)}</select></label><div className="range-control"><span>Period</span><div className="range-presets">{([['24h', '24 hours'], ['7d', '7 days'], ['30d', '30 days']] as const).map(([value, label]) => <button key={value} className={preset === value ? 'filter active' : 'filter'} onClick={() => setPreset(value)}>{label}</button>)}<button className={preset === 'custom' ? 'filter active' : 'filter'} onClick={() => setPreset('custom')}>Custom</button></div></div>{preset === 'custom' && <><label>From<input type="date" value={customFrom} onChange={(event) => setCustomFrom(event.target.value)} /></label><label>To<input type="date" value={customTo} onChange={(event) => setCustomTo(event.target.value)} /></label></>}</section>{!range && <div className="notice error" role="alert">Choose a valid date range of 90 days or less.</div>}{error && <div className="notice error" role="alert">{error}</div>}{loading && !report ? <div className="history-empty">Loading asset history…</div> : report ? <><div className="metric-row history-metrics"><Metric label="Average occupancy" value={formatPercent(report.summary.averageOccupancy)} accent="occupied" /><Metric label="Peak occupancy" value={formatPercent(report.summary.peakOccupancy)} accent="neutral" /><Metric label="Capacity" value={report.asset.capacity} accent="available" /><Metric label="Check-ins" value={report.summary.checkIns} accent="available" /><Metric label="Check-outs" value={report.summary.checkOuts} accent="neutral" /><Metric label="Manual actions" value={report.summary.manualHolds + report.summary.manualReleases} accent="occupied" /></div><div className="history-chart-grid"><TrendChart history={report} /><EventChart history={report} /></div></> : !error && <div className="history-empty">Select a bay with parking stalls to view its history.</div>}</section>;
+}
+
+function Metric({ label, value, accent }: { label: string; value: number | string; accent: string }) { return <div className={`metric ${accent}`}><span>{label}</span><strong>{value}</strong></div>; }
+
+function TrendChart({ history }: { history: OccupancyHistory }) {
+  const points = history.points; const width = 620; const height = 230; const plotTop = 24; const plotBottom = 190; const x = (index: number) => points.length < 2 ? width / 2 : 36 + index * (width - 72) / (points.length - 1); const y = (value: number) => plotBottom - value / 100 * (plotBottom - plotTop);
+  const line = points.map((point, index) => `${x(index)},${y(point.occupancyPercent)}`).join(' ');
+  return <section className="history-card"><div><h2>Occupancy</h2><p>Average occupied capacity per {history.granularity}.</p></div><svg viewBox={`0 0 ${width} ${height}`} className="history-chart" role="img" aria-label="Occupancy percentage over time"><line x1="36" x2={width - 36} y1={y(100)} y2={y(100)} className="chart-grid" /><line x1="36" x2={width - 36} y1={y(50)} y2={y(50)} className="chart-grid" /><line x1="36" x2={width - 36} y1={y(0)} y2={y(0)} className="chart-grid" /><text x="3" y={y(100) + 4}>100%</text><text x="12" y={y(50) + 4}>50%</text><text x="18" y={y(0) + 4}>0%</text>{points.length > 0 && <polyline points={line} className="occupancy-line" />}{points.map((point, index) => <g key={point.startsAt}><circle cx={x(index)} cy={y(point.occupancyPercent)} r="3.5" className="occupancy-point"><title>{`${chartLabel(point.startsAt, history.granularity)}: ${formatPercent(point.occupancyPercent)}`}</title></circle>{(index === 0 || index === points.length - 1 || index === Math.round((points.length - 1) / 2)) && <text x={x(index)} y="216" textAnchor="middle" className="chart-label">{chartLabel(point.startsAt, history.granularity)}</text>}</g>)}</svg></section>;
+}
+
+function EventChart({ history }: { history: OccupancyHistory }) {
+  const points = history.points; const width = 620; const height = 230; const plotBottom = 190; const max = Math.max(1, ...points.map((point) => point.checkIns + point.checkOuts + point.manualHolds + point.manualReleases)); const barWidth = Math.max(3, Math.min(22, (width - 72) / Math.max(points.length, 1) - 4));
+  const colors: Array<[keyof HistoryEventCounts, string]> = [['checkIns', 'check-in'], ['checkOuts', 'check-out'], ['manualHolds', 'manual-hold'], ['manualReleases', 'manual-release']];
+  return <section className="history-card"><div><h2>Activity</h2><p>Check-ins, check-outs, and manual occupancy actions.</p></div><div className="chart-key"><span className="check-in">Check-ins</span><span className="check-out">Check-outs</span><span className="manual-hold">Holds</span><span className="manual-release">Releases</span></div><svg viewBox={`0 0 ${width} ${height}`} className="history-chart" role="img" aria-label="Operational event counts over time"><line x1="36" x2={width - 36} y1={plotBottom} y2={plotBottom} className="chart-grid" />{points.map((point, index) => { const x = 36 + index * (width - 72) / Math.max(points.length, 1) + ((width - 72) / Math.max(points.length, 1) - barWidth) / 2; let stacked = 0; return <g key={point.startsAt}>{colors.map(([key, color]) => { const value = point[key] as number; const barHeight = value / max * 150; const y = plotBottom - stacked - barHeight; stacked += barHeight; return value ? <rect key={key} x={x} y={y} width={barWidth} height={barHeight} className={`event-bar ${color}`}><title>{`${chartLabel(point.startsAt, history.granularity)}: ${String(key)} ${value}`}</title></rect> : null; })}{(index === 0 || index === points.length - 1 || index === Math.round((points.length - 1) / 2)) && <text x={x + barWidth / 2} y="216" textAnchor="middle" className="chart-label">{chartLabel(point.startsAt, history.granularity)}</text>}</g>; })}</svg></section>;
+}
+
+function reportRange(preset: '24h' | '7d' | '30d' | 'custom', customFrom: string, customTo: string) {
+  if (preset === 'custom') {
+    if (!customFrom || !customTo) return null;
+    const from = new Date(`${customFrom}T00:00:00`); const to = new Date(`${customTo}T00:00:00`); to.setDate(to.getDate() + 1);
+    return Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || to <= from || to.getTime() - from.getTime() > 90 * 24 * 60 * 60 * 1000 ? null : { from, to };
+  }
+  const hours = preset === '24h' ? 24 : preset === '7d' ? 7 * 24 : 30 * 24;
+  const to = new Date(); return { from: new Date(to.getTime() - hours * 60 * 60 * 1000), to };
+}
+
+function localDate(value: Date) { return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`; }
+function formatPercent(value: number) { return `${value.toFixed(value % 1 ? 1 : 0)}%`; }
+function chartLabel(value: string, granularity: 'hour' | 'day') { return new Intl.DateTimeFormat(undefined, granularity === 'hour' ? { hour: 'numeric', month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric' }).format(new Date(value)); }
 
 function FloorMap({ floor, spots, visibleIds, selectedId, onSelect }: { floor: FloorPlanFloor; spots: ParkingSpot[]; visibleIds: Set<string>; selectedId?: string; onSelect: (spot: ParkingSpot) => void }) {
   const byId = new Map(spots.map((spot) => [spot.id, spot]));

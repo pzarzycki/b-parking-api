@@ -14,8 +14,8 @@ Use this documentation to understand the API contract and the floor-plan YAML up
 | Role | What it can do |
 | --- | --- |
 | Unauthenticated visitor | Download the current floor-plan YAML. |
-| Attendant | Sign in, inspect availability, check vehicles in and out, and record manual spot occupancy or release. |
-| Admin | All attendant actions, plus replace the floor plan, manage users, and read parking and audit history. |
+| Attendant | Sign in, inspect availability, check vehicles in and out, record manual spot occupancy or release, and view aggregate bay or stall history. |
+| Admin | All attendant actions, plus replace the floor plan, manage users, and read raw parking-session and audit history. |
 
 Operational requests use a short-lived JWT bearer token from `POST /api/auth/login`. The public floor-plan download is the only endpoint that does not require authentication.
 
@@ -25,7 +25,8 @@ Operational requests use a short-lived JWT bearer token from `POST /api/auth/log
 2. The API stores the document and synchronizes its floor, bay, and parking-spot projections.
 3. An attendant checks in a vehicle, either choosing an available spot or letting the API assign the next one.
 4. The attendant checks the vehicle out to close its session and release its spot.
-5. Administrators use parking history and audit events to review prior activity.
+5. Any signed-in staff member can review time-weighted bay or stall occupancy and operational activity over a selected period.
+6. Administrators can use raw parking history and audit events to investigate prior activity.
 
 ## Live updates
 
@@ -37,5 +38,6 @@ Authenticated clients can exchange their bearer token for a single-use, 60-secon
 - A spot can be available, occupied by a vehicle, or manually occupied for a stated reason. Vehicle occupancy is released only through checkout.
 - Vehicle sessions preserve immutable check-in details and have an optional checkout time. The same plate cannot have more than one active session.
 - Authenticated state-changing operations create audit events.
+- Asset history aggregates vehicle sessions and manual holds; its time range is UTC at the API boundary, capped at 90 days, and its end timestamp is exclusive.
 
 Continue with the [database schema](database-schema) to see how these concepts relate, or read [floor plans](floor-plans) before preparing a layout upload.

@@ -11,6 +11,7 @@ import Fastify from 'fastify';
 import Ajv2020 from 'ajv/dist/2020.js';
 import argon2 from 'argon2';
 import YAML from 'yaml';
+import { occupancyHistory } from './history.js';
 
 type Token = { sub: string; role: Role };
 const schema = JSON.parse(readFileSync(resolve('specs/floor-plan.schema.json'), 'utf8'));
@@ -100,6 +101,38 @@ export async function buildApp(db = new PrismaClient()) {
     try { const session = await db.$transaction(async (tx) => { if (await tx.parkingSession.findFirst({ where: { licensePlate, checkedOutAt: null } })) throw conflict('This license plate is already checked in.'); const spot = request.body?.spotId ? await tx.parkingSpot.findFirst({ where: { id: request.body.spotId, status: SpotStatus.available } }) : await tx.parkingSpot.findFirst({ where: { status: SpotStatus.available }, orderBy: [{ floorId: 'asc' }, { bayId: 'asc' }, { number: 'asc' }] }); if (!spot) throw conflict(request.body?.spotId ? 'The requested parking spot is unavailable.' : 'No available parking spot.'); const session = await tx.parkingSession.create({ data: { licensePlate, spotId: spot.id } }); await tx.parkingSpot.update({ where: { id: spot.id }, data: { status: SpotStatus.occupied, occupancySource: OccupancySource.vehicle } }); await audit(tx, request.user.sub, 'car_checked_in', 'parking_session', session.id, { spotId: spot.id }); return session; }); events.publish('parking.checked_in', session); return reply.code(201).send(session); } catch (error) { const status = (error as any).statusCode ?? ((error as any).code === 'P2002' ? 409 : 500); return reply.code(status).send(problem(status, status === 409 ? 'check_in_conflict' : 'check_in_failed', (error as Error).message)); }
   });
   app.post('/api/parking-sessions/check-out', { preHandler: (r, p) => auth(r, p) }, async (request: any, reply) => { const hasSession = typeof request.body?.sessionId === 'string'; const hasPlate = typeof request.body?.licensePlate === 'string'; if (hasSession === hasPlate) return reply.code(422).send(problem(422, 'invalid_checkout', 'Supply exactly one of sessionId or licensePlate.')); const q = hasSession ? { id: request.body.sessionId } : { licensePlate: plate(request.body.licensePlate), checkedOutAt: null }; const session = await db.parkingSession.findFirst({ where: q }); if (!session) return reply.code(404).send(problem(404, 'session_missing', 'No active session found.')); const updated = await db.$transaction(async tx => { const result = await tx.parkingSession.update({ where: { id: session.id }, data: { checkedOutAt: new Date() } }); await tx.parkingSpot.update({ where: { id: session.spotId }, data: { status: SpotStatus.available, occupancySource: null, manualReason: null } }); await audit(tx, request.user.sub, 'car_checked_out', 'parking_session', result.id, {}); return result; }); events.publish('parking.checked_out', updated); return updated; });
+  app.get('/api/history/occupancy', { preHandler: (r, p) => auth(r, p) }, async (request: any, reply) => {
+    const { bayId, spotId, from: rawFrom, to: rawTo } = request.query ?? {};
+    if (typeof bayId !== 'string' || typeof rawFrom !== 'string' || typeof rawTo !== 'string') return reply.code(422).send(problem(422, 'invalid_history_range', 'bayId, from, and to are required.'));
+    if (spotId !== undefined && typeof spotId !== 'string') return reply.code(422).send(problem(422, 'invalid_history_asset', 'spotId must be a string when supplied.'));
+    const from = new Date(rawFrom); const to = new Date(rawTo);
+    if (!rawFrom.endsWith('Z') || !rawTo.endsWith('Z') || Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || to <= from || to.getTime() - from.getTime() > 90 * 24 * 60 * 60 * 1000) return reply.code(422).send(problem(422, 'invalid_history_range', 'from and to must be valid UTC timestamps defining a range of at most 90 days.'));
+    const bay = await db.bay.findUnique({ where: { id: bayId } });
+    if (!bay) return reply.code(404).send(problem(404, 'bay_missing', 'Parking bay does not exist.'));
+    const spots = await db.parkingSpot.findMany({ where: { bayId, ...(spotId ? { id: spotId } : {}) }, orderBy: { number: 'asc' } });
+    if (spotId && spots.length === 0) return reply.code(404).send(problem(404, 'spot_missing', 'Parking spot does not exist in the selected bay.'));
+    const spotIds = spots.map((spot) => spot.id);
+    const [sessions, manualEvents] = await Promise.all([
+      db.parkingSession.findMany({ where: { spotId: { in: spotIds }, checkedInAt: { lt: to }, OR: [{ checkedOutAt: null }, { checkedOutAt: { gt: from } }] } }),
+      db.auditEvent.findMany({ where: { entityType: 'parking_spot', entityId: { in: spotIds }, action: { in: ['spot_manually_occupied', 'spot_manually_released'] }, occurredAt: { lt: to } }, orderBy: { occurredAt: 'asc' } })
+    ]);
+    const granularity = to.getTime() - from.getTime() <= 48 * 60 * 60 * 1000 ? 'hour' : 'day';
+    const history = occupancyHistory({
+      spotIds,
+      sessions,
+      manualEvents: manualEvents.map((event) => ({ spotId: event.entityId, action: event.action as 'spot_manually_occupied' | 'spot_manually_released', occurredAt: event.occurredAt })),
+      from,
+      to,
+      granularity
+    });
+    return {
+      asset: { type: spotId ? 'spot' : 'bay', id: spotId ?? bay.id, floorId: bay.floorId, bayId: bay.id, name: spotId ? spots[0].number : bay.name, capacity: spots.length },
+      from,
+      to,
+      granularity,
+      ...history
+    };
+  });
   app.get('/api/parking-sessions', { preHandler: (r, p) => auth(r, p, [Role.admin]) }, async (request: any) => page(db.parkingSession, request.query, { ...(request.query?.licensePlate ? { licensePlate: plate(request.query.licensePlate) } : {}), ...(request.query?.active === 'true' ? { checkedOutAt: null } : request.query?.active === 'false' ? { checkedOutAt: { not: null } } : {}) }, { checkedInAt: 'desc' }));
   app.get('/api/audit-events', { preHandler: (r, p) => auth(r, p, [Role.admin]) }, async (request: any) => page(db.auditEvent, request.query, { ...(request.query?.action ? { action: request.query.action } : {}), ...(request.query?.actorId ? { actorId: request.query.actorId } : {}), ...(request.query?.entityId ? { entityId: request.query.entityId } : {}) }, { occurredAt: 'desc' }));
   app.get('/api/users', { preHandler: (r, p) => auth(r, p, [Role.admin]) }, async () => (await db.user.findMany({ orderBy: { username: 'asc' } })).map(publicUser));

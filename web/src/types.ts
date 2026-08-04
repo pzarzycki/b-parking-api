@@ -55,6 +55,22 @@ export type ParkingSessionPage = {
   total: number;
 };
 
+export type HistoryEventCounts = {
+  checkIns: number;
+  checkOuts: number;
+  manualHolds: number;
+  manualReleases: number;
+};
+
+export type OccupancyHistory = {
+  asset: { type: 'bay' | 'spot'; id: string; floorId: string; bayId: string; name: string; capacity: number };
+  from: string;
+  to: string;
+  granularity: 'hour' | 'day';
+  summary: HistoryEventCounts & { averageOccupancy: number; peakOccupancy: number };
+  points: Array<HistoryEventCounts & { startsAt: string; endsAt: string; occupancyPercent: number }>;
+};
+
 export type Point = { x: number; y: number };
 
 export type PlanSpot = {

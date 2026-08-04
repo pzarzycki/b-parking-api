@@ -28,7 +28,7 @@ Parking Garage Management API is a contract-first system for operating a single 
 
 | Area | Capability |
 | --- | --- |
-| Operations API | JWT-authenticated check-in/out, spot occupancy, users, parking history, and audit events. |
+| Operations API | JWT-authenticated check-in/out, spot occupancy, bay/stall occupancy history, users, parking history, and audit events. |
 | Floor plans | Schema-validated YAML layouts with routes, gates, amenities, bays, and accessible/EV spaces. |
 | Dashboard | A React operations UI with live floor maps and spot-level workflow. |
 | Documentation | Docusaurus guides, Mermaid database schema, generated floor-plan visuals, and a static Scalar API reference. |
@@ -53,6 +53,16 @@ Once the services are healthy:
 | OpenAPI contract | [http://localhost:3000/openapi.yaml](http://localhost:3000/openapi.yaml) |
 
 On a fresh local database, Compose creates `admin` / `admin` and loads the sample two-floor layout. Change this bootstrap password immediately. Existing local data remains in the named PostgreSQL volume.
+
+### Temporary public URL
+
+Compose also starts a Cloudflare Quick Tunnel. Find its generated public URL with:
+
+```bash
+docker compose logs tunnel
+```
+
+The URL exposes the dashboard and its proxied API under the same origin: use `/api/*`, `/api/docs`, and `/openapi.yaml` beneath that URL. It is a temporary `trycloudflare.com` address that changes whenever the tunnel restarts; use an authenticated named tunnel and a configured hostname for a stable deployment.
 
 ## Documentation
 

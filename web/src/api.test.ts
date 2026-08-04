@@ -38,6 +38,14 @@ describe('ApiClient', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/parking-sessions?active=true&page=1&pageSize=100', expect.anything());
   });
 
+  it('requests an asset occupancy report with the selected bay, stall, and UTC range', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ asset: {}, summary: {}, points: [] }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    await new ApiClient('token-123').occupancyHistory({ bayId: 'ground-a', spotId: 'G-A01', from: '2026-01-01T00:00:00.000Z', to: '2026-01-08T00:00:00.000Z' });
+    expect(fetchMock).toHaveBeenCalledWith('/api/history/occupancy?bayId=ground-a&from=2026-01-01T00%3A00%3A00.000Z&to=2026-01-08T00%3A00%3A00.000Z&spotId=G-A01', expect.anything());
+    expect(((fetchMock.mock.calls[0][1] as RequestInit).headers as Headers).get('Authorization')).toBe('Bearer token-123');
+  });
+
   it('exchanges the bearer token for a one-time WebSocket ticket', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ ticket: 'ticket-1', expiresAt: '2026-01-01T00:01:00Z' }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);

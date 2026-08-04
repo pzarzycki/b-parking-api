@@ -1,4 +1,4 @@
-import type { ParkingSession, ParkingSessionPage, ParkingSpot, ParkingSpotPage, Session, User, WebSocketTicket } from './types';
+import type { OccupancyHistory, ParkingSession, ParkingSessionPage, ParkingSpot, ParkingSpotPage, Session, User, WebSocketTicket } from './types';
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -63,6 +63,12 @@ export class ApiClient {
   async activeSessionForSpot(spotId: string): Promise<ParkingSession | null> {
     const page = await this.request<ParkingSessionPage>('/api/parking-sessions?active=true&page=1&pageSize=100');
     return page.items.find((session) => session.spotId === spotId) ?? null;
+  }
+
+  async occupancyHistory(input: { bayId: string; spotId?: string; from: string; to: string }): Promise<OccupancyHistory> {
+    const query = new URLSearchParams({ bayId: input.bayId, from: input.from, to: input.to });
+    if (input.spotId) query.set('spotId', input.spotId);
+    return this.request<OccupancyHistory>(`/api/history/occupancy?${query}`);
   }
 
   async checkOut(reference: { sessionId: string } | { licensePlate: string }): Promise<ParkingSession> {
