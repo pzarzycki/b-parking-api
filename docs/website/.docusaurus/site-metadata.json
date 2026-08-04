@@ -21,9 +21,6 @@
       "name": "@docusaurus/theme-classic",
       "version": "3.10.2"
     },
-    "scalar-esm-compatibility": {
-      "type": "local"
-    },
     "@scalar/docusaurus": {
       "type": "package",
       "name": "@scalar/docusaurus",

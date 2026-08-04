@@ -41,10 +41,6 @@ export default {
           "path": "..",
           "routeBasePath": "/",
           "sidebarPath": "./sidebars.ts",
-          "include": [
-            "*.md",
-            "**/*.md"
-          ],
           "exclude": [
             "website/**"
           ]
@@ -58,12 +54,13 @@ export default {
     ]
   ],
   "plugins": [
-    null,
     [
       "@scalar/docusaurus",
       {
+        "id": "parking-api-reference",
         "label": "API reference",
         "route": "/api-reference",
+        "showNavLink": false,
         "configuration": {
           "url": "/b-parking-api/openapi.yaml",
           "hideClientButton": true,
@@ -95,11 +92,6 @@ export default {
           "href": "https://github.com/pzarzycki/b-parking-api",
           "position": "right",
           "label": "GitHub"
-        },
-        {
-          "to": "/b-parking-api/api-reference",
-          "label": "API reference",
-          "position": "left"
         }
       ],
       "hideOnScroll": false
