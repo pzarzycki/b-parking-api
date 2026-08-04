@@ -29,25 +29,36 @@ version: 1
 garage:
   id: downtown-garage
   name: Downtown Garage
+  units: metres
 floors:
-  - id: P1
+  - id: ground
     level: 0
     name: Ground floor
-    canvas: { width: 1200, height: 800 }
+    canvas: { width: 120, height: 80 }
+    footprint: { points: [{ x: 4, y: 5 }, { x: 116, y: 5 }, { x: 116, y: 75 }, { x: 4, y: 75 }] }
+    routes:
+      - id: ground-main
+        kind: driveAisle
+        direction: oneWay
+        geometry: { points: [{ x: 7, y: 31 }, { x: 113, y: 31 }, { x: 113, y: 49 }, { x: 7, y: 49 }] }
+        centerline: [{ x: 8, y: 40 }, { x: 112, y: 40 }]
+        connectsTo: []
+    gates: []
+    amenities: []
     bays:
-      - id: P1-A
+      - id: ground-north
         name: Bay A
+        geometry: { points: [{ x: 8, y: 8 }, { x: 48, y: 8 }, { x: 48, y: 29 }, { x: 8, y: 29 }] }
+        labelAt: { x: 10, y: 12 }
         spots:
-          - id: P1-A-001
-            number: "001"
-            geometry: { x: 80, y: 100, width: 42, height: 86, orientation: 0 }
-    features:
-      - id: drive-1
-        type: lane
-        points: [{ x: 0, y: 300 }, { x: 1200, y: 300 }]
+          - id: G-A01
+            label: A01
+            kind: standard
+            routeId: ground-main
+            geometry: { x: 12, y: 15, width: 5, height: 10, rotation: 0 }
 ```
 
-`id` values are stable identifiers matching `^[A-Za-z][A-Za-z0-9_-]{0,63}$`. Spot IDs, bay IDs, floor IDs, feature IDs, and floor levels are globally unique in a document. Floor level `0` is ground level; gates are permitted only there. Canvases and spot dimensions are positive finite numbers; spot coordinates are non-negative; orientation is a number in degrees clockwise around the spot centre. A `lane` is a marked parking aisle; a `way` is a circulation route; `wall` is a barrier. Each is an arbitrary polyline with at least two distinct points. A `gate` additionally declares `direction` as `in` or `out`; it is a two-point ground-floor entry/exit crossing. The importer rejects duplicate IDs, invalid or out-of-bounds geometry, intersecting spots, malformed YAML, and removal/move/renumber of an occupied or historically referenced spot. Non-destructive changes such as labels and geometry are allowed.
+`id` values are stable identifiers matching `^[A-Za-z][A-Za-z0-9_-]{0,63}$` and are globally unique. A floor contains its drawing footprint, named route polygons and centrelines, gates, amenities, bays, and parking spaces. Every space explicitly references a route. Floor level `0` is ground level and gates are permitted only there. The importer rejects malformed YAML, duplicate IDs, invalid geometry, out-of-bounds points, and dangling route references.
 
 Repository examples in `examples/` are upload-ready templates, not a second source of truth.
 

@@ -22,6 +22,7 @@ export function buildApp(db = new PrismaClient()) {
   app.register(jwt, { secret: process.env.JWT_SECRET ?? 'development-only-change-me' });
   app.register(swagger, { mode: 'static', specification: { path: resolve('specs/openapi.yaml') } });
   app.register(swaggerUi, { routePrefix: '/api/docs' });
+  app.get('/openapi.yaml', async (_request, reply) => reply.type('application/yaml').send(readFileSync(resolve('specs/openapi.yaml'), 'utf8')));
   const auth = async (request: any, reply: any, roles?: Role[]) => {
     try { await request.jwtVerify(); } catch { return reply.code(401).send(problem(401, 'unauthorized', 'A valid bearer token is required.')); }
     if (roles && !roles.includes(request.user.role)) return reply.code(403).send(problem(403, 'forbidden', 'Your role cannot perform this operation.'));
@@ -43,8 +44,9 @@ export function buildApp(db = new PrismaClient()) {
     const yaml = request.body?.yaml;
     if (typeof yaml !== 'string') return reply.code(422).send(problem(422, 'invalid_layout', 'yaml must be a string.'));
     const doc = YAML.parseDocument(yaml, { uniqueKeys: true, prettyErrors: true });
-    if (doc.errors.length || !validateLayout(doc.toJS())) return reply.code(422).send(problem(422, 'invalid_layout', 'The floor plan does not match the schema.'));
-    const plan: any = doc.toJS(); const hash = createHash('sha256').update(yaml).digest('hex');
+    const plan: any = doc.toJS(); const layoutErrors = validateRelationships(plan);
+    if (doc.errors.length || !validateLayout(plan) || layoutErrors.length) return reply.code(422).send({ ...problem(422, 'invalid_layout', 'The floor plan does not match the schema or contains invalid relationships.'), errors: layoutErrors.map((message) => ({ path: '/', message })) });
+    const hash = createHash('sha256').update(yaml).digest('hex');
     await db.$transaction(async (tx) => {
       // Alpha reset semantics: a new layout replaces all layout-derived state and history.
       await tx.auditEvent.deleteMany(); await tx.parkingSession.deleteMany(); await tx.parkingSpot.deleteMany(); await tx.bay.deleteMany(); await tx.floor.deleteMany();
@@ -52,10 +54,10 @@ export function buildApp(db = new PrismaClient()) {
       await tx.garageLayout.upsert({ where: { id: 1 }, create: { id: 1, yaml, revision: 1, sha256: hash, uploadedById: request.user.sub }, update: { yaml, sha256: hash, revision: { increment: 1 }, uploadedById: request.user.sub } });
       await audit(tx, request.user.sub, 'floor_plan_uploaded', 'garage_layout', '1', { sha256: hash });
     });
-    return db.garageLayout.findUniqueOrThrow({ where: { id: 1 } });
+    return layoutRevision(await db.garageLayout.findUniqueOrThrow({ where: { id: 1 } }));
   });
-  app.get('/api/parking-spots', { preHandler: (r, p) => auth(r, p) }, async (request: any) => db.parkingSpot.findMany({ where: { ...(request.query?.status ? { status: request.query.status } : {}), ...(request.query?.floorId ? { floorId: request.query.floorId } : {}) }, orderBy: [{ floorId: 'asc' }, { bayId: 'asc' }, { number: 'asc' }] }));
-  app.get('/api/parking-spots/available', { preHandler: (r, p) => auth(r, p) }, async () => db.parkingSpot.findMany({ where: { status: SpotStatus.available } }));
+  app.get('/api/parking-spots', { preHandler: (r, p) => auth(r, p) }, async (request: any) => page(db.parkingSpot, request.query, { ...(request.query?.status ? { status: request.query.status } : {}), ...(request.query?.floorId ? { floorId: request.query.floorId } : {}), ...(request.query?.bayId ? { bayId: request.query.bayId } : {}) }, [{ floorId: 'asc' }, { bayId: 'asc' }, { number: 'asc' }]));
+  app.get('/api/parking-spots/available', { preHandler: (r, p) => auth(r, p) }, async (request: any) => page(db.parkingSpot, request.query, { status: SpotStatus.available, ...(request.query?.floorId ? { floorId: request.query.floorId } : {}), ...(request.query?.bayId ? { bayId: request.query.bayId } : {}) }, [{ floorId: 'asc' }, { bayId: 'asc' }, { number: 'asc' }]));
   app.get('/api/parking-spots/:spotId', { preHandler: (r, p) => auth(r, p) }, async (request: any, reply) => {
     const spot = await db.parkingSpot.findUnique({ where: { id: request.params.spotId } });
     return spot ?? reply.code(404).send(problem(404, 'spot_missing', 'Parking spot does not exist.'));
@@ -76,9 +78,9 @@ export function buildApp(db = new PrismaClient()) {
   });
   app.post('/api/parking-sessions/check-in', { preHandler: (r, p) => auth(r, p) }, async (request: any, reply) => {
     const licensePlate = plate(request.body?.licensePlate ?? ''); if (!licensePlate) return reply.code(422).send(problem(422, 'invalid_plate', 'licensePlate is required.'));
-    try { return await db.$transaction(async (tx) => { if (await tx.parkingSession.findFirst({ where: { licensePlate, checkedOutAt: null } })) throw conflict('This license plate is already checked in.'); const spot = request.body?.spotId ? await tx.parkingSpot.findFirst({ where: { id: request.body.spotId, status: SpotStatus.available } }) : await tx.parkingSpot.findFirst({ where: { status: SpotStatus.available }, orderBy: [{ floorId: 'asc' }, { bayId: 'asc' }, { number: 'asc' }] }); if (!spot) throw conflict(request.body?.spotId ? 'The requested parking spot is unavailable.' : 'No available parking spot.'); const session = await tx.parkingSession.create({ data: { licensePlate, spotId: spot.id } }); await tx.parkingSpot.update({ where: { id: spot.id }, data: { status: SpotStatus.occupied, occupancySource: OccupancySource.vehicle } }); await audit(tx, request.user.sub, 'car_checked_in', 'parking_session', session.id, { spotId: spot.id }); return session; }); } catch (error) { const status = (error as any).statusCode ?? ((error as any).code === 'P2002' ? 409 : 500); return reply.code(status).send(problem(status, status === 409 ? 'check_in_conflict' : 'check_in_failed', (error as Error).message)); }
+    try { const session = await db.$transaction(async (tx) => { if (await tx.parkingSession.findFirst({ where: { licensePlate, checkedOutAt: null } })) throw conflict('This license plate is already checked in.'); const spot = request.body?.spotId ? await tx.parkingSpot.findFirst({ where: { id: request.body.spotId, status: SpotStatus.available } }) : await tx.parkingSpot.findFirst({ where: { status: SpotStatus.available }, orderBy: [{ floorId: 'asc' }, { bayId: 'asc' }, { number: 'asc' }] }); if (!spot) throw conflict(request.body?.spotId ? 'The requested parking spot is unavailable.' : 'No available parking spot.'); const session = await tx.parkingSession.create({ data: { licensePlate, spotId: spot.id } }); await tx.parkingSpot.update({ where: { id: spot.id }, data: { status: SpotStatus.occupied, occupancySource: OccupancySource.vehicle } }); await audit(tx, request.user.sub, 'car_checked_in', 'parking_session', session.id, { spotId: spot.id }); return session; }); return reply.code(201).send(session); } catch (error) { const status = (error as any).statusCode ?? ((error as any).code === 'P2002' ? 409 : 500); return reply.code(status).send(problem(status, status === 409 ? 'check_in_conflict' : 'check_in_failed', (error as Error).message)); }
   });
-  app.post('/api/parking-sessions/check-out', { preHandler: (r, p) => auth(r, p) }, async (request: any, reply) => { const q = request.body?.sessionId ? { id: request.body.sessionId } : request.body?.licensePlate ? { licensePlate: plate(request.body.licensePlate), checkedOutAt: null } : null; if (!q) return reply.code(422).send(problem(422, 'invalid_checkout', 'Supply sessionId or licensePlate.')); const session = await db.parkingSession.findFirst({ where: q }); if (!session) return reply.code(404).send(problem(404, 'session_missing', 'No active session found.')); const updated = await db.$transaction(async tx => { const result = await tx.parkingSession.update({ where: { id: session.id }, data: { checkedOutAt: new Date() } }); await tx.parkingSpot.update({ where: { id: session.spotId }, data: { status: SpotStatus.available, occupancySource: null } }); await audit(tx, request.user.sub, 'car_checked_out', 'parking_session', result.id, {}); return result; }); return updated; });
+  app.post('/api/parking-sessions/check-out', { preHandler: (r, p) => auth(r, p) }, async (request: any, reply) => { const hasSession = typeof request.body?.sessionId === 'string'; const hasPlate = typeof request.body?.licensePlate === 'string'; if (hasSession === hasPlate) return reply.code(422).send(problem(422, 'invalid_checkout', 'Supply exactly one of sessionId or licensePlate.')); const q = hasSession ? { id: request.body.sessionId } : { licensePlate: plate(request.body.licensePlate), checkedOutAt: null }; const session = await db.parkingSession.findFirst({ where: q }); if (!session) return reply.code(404).send(problem(404, 'session_missing', 'No active session found.')); const updated = await db.$transaction(async tx => { const result = await tx.parkingSession.update({ where: { id: session.id }, data: { checkedOutAt: new Date() } }); await tx.parkingSpot.update({ where: { id: session.spotId }, data: { status: SpotStatus.available, occupancySource: null, manualReason: null } }); await audit(tx, request.user.sub, 'car_checked_out', 'parking_session', result.id, {}); return result; }); return updated; });
   app.get('/api/parking-sessions', { preHandler: (r, p) => auth(r, p, [Role.admin]) }, async (request: any) => page(db.parkingSession, request.query, { ...(request.query?.licensePlate ? { licensePlate: plate(request.query.licensePlate) } : {}), ...(request.query?.active === 'true' ? { checkedOutAt: null } : request.query?.active === 'false' ? { checkedOutAt: { not: null } } : {}) }, { checkedInAt: 'desc' }));
   app.get('/api/audit-events', { preHandler: (r, p) => auth(r, p, [Role.admin]) }, async (request: any) => page(db.auditEvent, request.query, { ...(request.query?.action ? { action: request.query.action } : {}), ...(request.query?.actorId ? { actorId: request.query.actorId } : {}), ...(request.query?.entityId ? { entityId: request.query.entityId } : {}) }, { occurredAt: 'desc' }));
   app.get('/api/users', { preHandler: (r, p) => auth(r, p, [Role.admin]) }, async () => (await db.user.findMany({ orderBy: { username: 'asc' } })).map(publicUser));
@@ -89,6 +91,7 @@ export function buildApp(db = new PrismaClient()) {
   app.patch('/api/users/:userId', { preHandler: (r, p) => auth(r, p, [Role.admin]) }, async (request: any, reply) => {
     const existing = await db.user.findUnique({ where: { id: request.params.userId } }); if (!existing) return reply.code(404).send(problem(404, 'user_missing', 'User does not exist.'));
     const { role, active, password } = request.body ?? {}; if (role !== undefined && !['admin', 'attendant'].includes(role)) return reply.code(422).send(problem(422, 'invalid_role', 'role must be admin or attendant.'));
+    if (role === undefined && active === undefined && password === undefined || typeof password === 'string' && password.length < 8) return reply.code(422).send(problem(422, 'invalid_user_update', 'Provide a valid role, active state, or an 8-character password.'));
     if ((active === false || role === 'attendant') && existing.role === Role.admin && await db.user.count({ where: { role: Role.admin, active: true } }) === 1) return reply.code(409).send(problem(409, 'last_admin', 'The final active admin cannot be removed or demoted.'));
     const user = await db.user.update({ where: { id: existing.id }, data: { ...(role !== undefined ? { role } : {}), ...(typeof active === 'boolean' ? { active } : {}), ...(typeof password === 'string' ? { passwordHash: await argon2.hash(password) } : {}) } }); await audit(db, request.user.sub, 'user_updated', 'user', user.id, {}); return publicUser(user);
   });
@@ -97,10 +100,24 @@ export function buildApp(db = new PrismaClient()) {
 const problem = (status: number, code: string, detail: string) => ({ type: `https://parking.example/problems/${code}`, title: code, status, detail, code });
 const conflict = (message: string) => Object.assign(new Error(message), { statusCode: 409 });
 const publicUser = (user: any) => ({ id: user.id, username: user.username, role: user.role, active: user.active, createdAt: user.createdAt, updatedAt: user.updatedAt });
+const layoutRevision = (layout: any) => ({ revision: layout.revision, sha256: layout.sha256, updatedAt: layout.updatedAt, uploadedBy: layout.uploadedById });
 const audit = (tx: any, actorId: string, action: string, entityType: string, entityId: string, details: object) => tx.auditEvent.create({ data: { actorId, action, entityType, entityId, details } });
 async function page(model: any, query: Record<string, string | undefined> | undefined, where: object, orderBy: object) {
   const pageNumber = Math.max(1, Number(query?.page ?? 1) || 1);
   const pageSize = Math.min(100, Math.max(1, Number(query?.pageSize ?? 50) || 50));
   const [items, total] = await Promise.all([model.findMany({ where, orderBy, skip: (pageNumber - 1) * pageSize, take: pageSize }), model.count({ where })]);
   return { items, page: pageNumber, pageSize, total };
+}
+function validateRelationships(plan: any): string[] {
+  const errors: string[] = []; const ids = new Set<string>();
+  const claim = (id: string, label: string) => { if (ids.has(id)) errors.push(`duplicate ${label} ID: ${id}`); ids.add(id); };
+  for (const floor of plan?.floors ?? []) {
+    claim(floor.id, 'floor'); const routes = new Set<string>();
+    for (const route of floor.routes ?? []) { claim(route.id, 'route'); routes.add(route.id); }
+    for (const route of floor.routes ?? []) for (const connection of route.connectsTo ?? []) if (!routes.has(connection)) errors.push(`${route.id} references unknown route ${connection}`);
+    for (const gate of floor.gates ?? []) { claim(gate.id, 'gate'); if (floor.level !== 0) errors.push(`${gate.id} is on a non-ground floor`); if (!routes.has(gate.connectsTo)) errors.push(`${gate.id} references unknown route ${gate.connectsTo}`); }
+    for (const amenity of floor.amenities ?? []) claim(amenity.id, 'amenity');
+    for (const bay of floor.bays ?? []) { claim(bay.id, 'bay'); for (const spot of bay.spots ?? []) { claim(spot.id, 'spot'); if (!routes.has(spot.routeId)) errors.push(`${spot.id} references unknown route ${spot.routeId}`); } }
+  }
+  return errors;
 }
