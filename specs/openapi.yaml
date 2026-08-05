@@ -11,7 +11,8 @@ info:
     a bearer token returned by the login operation. The floor-plan YAML download
     is intentionally public for the visualization client.
 servers:
-  - url: /
+  - url: https://your-api.invalid
+    description: Example deployment URL. Replace with the URL of your Parking Garage Management API.
 tags:
   - name: Authentication
     description: Obtain and inspect JWT credentials for API users.
